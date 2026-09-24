@@ -1,0 +1,214 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * JustPlay design system — SHARED with the consumer and partner apps.
+ * Light theme, Playfair Display for headings, Plus Jakarta Sans for body/UI.
+ * Same primary (pitch green) + accent (ochre) tokens for brand consistency.
+ * All colors are oklch tokens. Never hardcode colors in components.
+ *
+ * Admin is the highest-density of the three apps, but "dense" is not the
+ * same as "plain" — it borrows the consumer app's polish (soft depth,
+ * rounded-xl cards, tinted icon chips, a little motion on hover) and
+ * applies it at a tighter scale, rather than dropping it altogether.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.99 0.004 100);
+  --foreground: oklch(0.22 0.02 260);
+
+  --surface: oklch(1 0 0);
+  --surface-raised: oklch(0.97 0.006 250);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.02 260);
+
+  /* Deep pitch green — primary action, matches consumer/partner apps */
+  --primary: oklch(0.55 0.14 152);
+  --primary-foreground: oklch(0.99 0.005 150);
+
+  --secondary: oklch(0.96 0.006 250);
+  --secondary-foreground: oklch(0.28 0.02 260);
+
+  --muted: oklch(0.95 0.006 250);
+  --muted-foreground: oklch(0.5 0.018 258);
+
+  /* Warm ochre — used sparingly here: status/critical CTAs only */
+  --accent: oklch(0.68 0.14 62);
+  --accent-foreground: oklch(0.99 0.005 90);
+
+  --destructive: oklch(0.58 0.2 25);
+  --destructive-foreground: oklch(0.99 0.003 250);
+
+  --success: oklch(0.6 0.13 152);
+  --success-foreground: oklch(0.99 0.005 150);
+  --warning: oklch(0.72 0.15 75);
+  --warning-foreground: oklch(0.24 0.03 70);
+
+  --border: oklch(0.91 0.006 260);
+  --input: oklch(0.91 0.006 260);
+  --ring: oklch(0.55 0.14 152);
+
+  --chart-1: oklch(0.55 0.14 152);
+  --chart-2: oklch(0.68 0.14 62);
+  --chart-3: oklch(0.58 0.12 235);
+  --chart-4: oklch(0.6 0.17 12);
+  --chart-5: oklch(0.6 0.13 300);
+
+  --sidebar: oklch(0.98 0.004 250);
+  --sidebar-foreground: oklch(0.22 0.02 260);
+  --sidebar-primary: oklch(0.55 0.14 152);
+  --sidebar-primary-foreground: oklch(0.99 0.005 150);
+  --sidebar-accent: oklch(0.96 0.006 250);
+  --sidebar-accent-foreground: oklch(0.22 0.02 260);
+  --sidebar-border: oklch(0.91 0.006 260);
+  --sidebar-ring: oklch(0.55 0.14 152);
+
+  --gradient-primary: linear-gradient(
+    100deg,
+    var(--primary),
+    color-mix(in oklab, var(--primary) 55%, var(--accent))
+  );
+  --shadow-card: 0 6px 20px -14px oklch(0.3 0.02 260 / 0.5);
+  --shadow-card-hover: 0 14px 32px -16px oklch(0.3 0.02 260 / 0.55);
+  --shadow-glow: 0 8px 24px -10px color-mix(in oklab, var(--primary) 55%, transparent);
+}
+
+.dark {
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  /* Tabular numerals everywhere for scanability — this is a data-density tool */
+  body {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@utility surface-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+@utility surface-card-hover {
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: color-mix(in oklab, var(--primary) 25%, var(--border));
+    transform: translateY(-1px);
+  }
+}
+
+@utility gradient-primary {
+  background-image: var(--gradient-primary);
+}
+
+@utility glow-primary {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Tinted circular icon chip — used for stat cards, alerts, activity rows */
+@utility icon-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+/* Compact ops-tool row used in tables/feeds/lists across the admin app */
+@utility ops-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
