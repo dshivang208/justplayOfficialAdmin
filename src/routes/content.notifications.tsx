@@ -110,7 +110,7 @@ export function NotificationsPage() {
         <div className="surface-card mt-5 rounded-xl p-5">
           <p className="mb-3 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
             In-app delivers to a real per-user inbox the consumer app reads. SMS sends for real via
-            Twilio, and Push sends real browser/OS push notifications via Web Push \u2014 both only
+            Twilio, and Push sends real browser/OS push notifications via Web Push — both only
             to users who've opted in on their device for push.
           </p>
           <Label htmlFor="ntf-message">Message</Label>
@@ -151,11 +151,11 @@ export function NotificationsPage() {
               </label>
               <label className="flex items-center gap-2 text-sm text-foreground">
                 <Checkbox checked={sendSms} onCheckedChange={(v) => setSendSms(v === true)} />
-                SMS (real send via Twilio \u2014 costs money per message, sent to every matching user)
+                SMS (real send via Twilio — costs money per message, sent to every matching user)
               </label>
               <label className="flex items-center gap-2 text-sm text-foreground">
                 <Checkbox checked={sendPush} onCheckedChange={(v) => setSendPush(v === true)} />
-                Push notification (real Web Push \u2014 only reaches users who've enabled it on their device)
+                Push notification (real Web Push — only reaches users who've enabled it on their device)
               </label>
             </div>
           </div>
@@ -188,8 +188,8 @@ export function NotificationsPage() {
                 <li key={n.id} className="px-4 py-3">
                   <p className="text-sm text-foreground">{n.message}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {audienceLabels[n.audience]} \u00b7 {n.recipientCount.toLocaleString("en-IN")} recipients
-                    \u00b7 {formatDate(n.sentDate)}
+                    {audienceLabels[n.audience]} · {n.recipientCount.toLocaleString("en-IN")} recipients
+                    · {formatDate(n.sentDate)}
                   </p>
                 </li>
               ))}
