@@ -53,11 +53,20 @@ type VenueRow = {
   photos: string[] | null;
   sports_offered: string[] | null;
   is_active: boolean;
+  created_at: string;
+};
+
+/** approval_status / rejection_reason / deactivation_reason / approved_at
+ *  are moderation-only fields — not in the public column allow-list on
+ *  `venues` (see migration 20260915000000_venues_private_columns.sql),
+ *  so they're fetched separately through an is_admin()-gated RPC instead
+ *  of the raw table. */
+type ModerationRow = {
+  venue_id: string;
   approval_status: "pending" | "approved" | "rejected";
   rejection_reason: string | null;
   deactivation_reason: string | null;
   approved_at: string | null;
-  created_at: string;
 };
 
 type VenuePricingRow = { venue_id: string; price_per_slot: number };
@@ -78,9 +87,10 @@ function toDate(iso: string | null) {
   return iso ? iso.slice(0, 10) : null;
 }
 
-function deriveStatus(row: VenueRow): VenueStatus {
-  if (row.approval_status === "pending") return "pending";
-  if (row.approval_status === "rejected") return "inactive";
+function deriveStatus(row: VenueRow, moderation: ModerationRow | undefined): VenueStatus {
+  const approvalStatus = moderation?.approval_status ?? "pending";
+  if (approvalStatus === "pending") return "pending";
+  if (approvalStatus === "rejected") return "inactive";
   return row.is_active ? "active" : "inactive";
 }
 
@@ -94,9 +104,7 @@ async function tableExists(table: string) {
 export async function listVenues(): Promise<Venue[]> {
   const { data: venues, error } = await supabase
     .from("venues")
-    .select(
-      "id, name, address, city, area, about, tagline, photos, sports_offered, is_active, approval_status, rejection_reason, deactivation_reason, approved_at, created_at",
-    )
+    .select("id, name, address, city, area, about, tagline, photos, sports_offered, is_active, created_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   const rows = (venues ?? []) as VenueRow[];
@@ -105,7 +113,7 @@ export async function listVenues(): Promise<Venue[]> {
   const venueIds = rows.map((v) => v.id);
   const hasPartnerVenues = await tableExists("partner_venues");
 
-  const [pricingRes, commissionRes, historyRes, linkRes] = await Promise.all([
+  const [pricingRes, commissionRes, historyRes, linkRes, moderationRes] = await Promise.all([
     supabase.from("venue_pricing").select("venue_id, price_per_slot").in("venue_id", venueIds),
     supabase.from("venue_commission").select("venue_id, commission_rate").in("venue_id", venueIds),
     supabase
@@ -116,16 +124,21 @@ export async function listVenues(): Promise<Venue[]> {
     hasPartnerVenues
       ? supabase.from("partner_venues").select("venue_id, partner_id").in("venue_id", venueIds)
       : Promise.resolve({ data: [] as PartnerVenueRow[], error: null }),
+    supabase.rpc("admin_get_venue_moderation_fields"),
   ]);
 
   if (pricingRes.error) throw new Error(pricingRes.error.message);
   if (commissionRes.error) throw new Error(commissionRes.error.message);
   if (historyRes.error) throw new Error(historyRes.error.message);
+  if (moderationRes.error) throw new Error(moderationRes.error.message);
 
   const pricing = (pricingRes.data ?? []) as VenuePricingRow[];
   const commission = (commissionRes.data ?? []) as VenueCommissionRow[];
   const history = (historyRes.data ?? []) as VenueCommissionHistoryRow[];
   const links = (linkRes.data ?? []) as PartnerVenueRow[];
+  const moderationByVenue = new Map(
+    ((moderationRes.data ?? []) as ModerationRow[]).map((m) => [m.venue_id, m]),
+  );
 
   // changed_by is an admin_users id — resolve names in one extra query
   // rather than joining, since venue_commission_history has no FK the
@@ -158,25 +171,29 @@ export async function listVenues(): Promise<Venue[]> {
     historyByVenue.set(h.venue_id, list);
   }
 
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    partnerId: partnerByVenue.get(row.id) ?? null,
-    city: row.city,
-    area: row.area ?? "",
-    address: row.address,
-    status: deriveStatus(row),
-    sports: row.sports_offered ?? [],
-    pricePerHour: priceByVenue.get(row.id) ?? null,
-    description: row.about ?? row.tagline ?? "",
-    images: row.photos ?? [],
-    submittedDate: toDate(row.created_at)!,
-    onboardedDate: row.approval_status === "approved" ? toDate(row.approved_at) : null,
-    commissionRate: commissionByVenue.get(row.id) ?? 12,
-    commissionHistory: historyByVenue.get(row.id) ?? [],
-    rejectionReason: row.rejection_reason ?? undefined,
-    deactivationReason: row.deactivation_reason ?? undefined,
-  }));
+  return rows.map((row) => {
+    const moderation = moderationByVenue.get(row.id);
+    return {
+      id: row.id,
+      name: row.name,
+      partnerId: partnerByVenue.get(row.id) ?? null,
+      city: row.city,
+      area: row.area ?? "",
+      address: row.address,
+      status: deriveStatus(row, moderation),
+      sports: row.sports_offered ?? [],
+      pricePerHour: priceByVenue.get(row.id) ?? null,
+      description: row.about ?? row.tagline ?? "",
+      images: row.photos ?? [],
+      submittedDate: toDate(row.created_at)!,
+      onboardedDate:
+        moderation?.approval_status === "approved" ? toDate(moderation.approved_at) : null,
+      commissionRate: commissionByVenue.get(row.id) ?? 12,
+      commissionHistory: historyByVenue.get(row.id) ?? [],
+      rejectionReason: moderation?.rejection_reason ?? undefined,
+      deactivationReason: moderation?.deactivation_reason ?? undefined,
+    };
+  });
 }
 
 export async function getVenue(id: string): Promise<Venue | null> {
