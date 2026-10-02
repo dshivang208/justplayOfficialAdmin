@@ -23,7 +23,7 @@ export type AlertItem = {
   href: string;
 };
 
-async function countWhereEqual(table: string, column: string, value: string | boolean) {
+export async function countWhereEqual(table: string, column: string, value: string | boolean) {
   const { count, error } = await supabase
     .from(table)
     .select("id", { count: "exact", head: true })
