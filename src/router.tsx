@@ -24,6 +24,7 @@ import { PayoutOversightPage } from "@/routes/payments.payouts";
 import { RefundQueuePage } from "@/routes/payments.refunds";
 import { FinancialSummaryPage } from "@/routes/payments.summary";
 import { FeaturedContentPage } from "@/routes/content";
+import { EventsPage } from "@/routes/content.events";
 import { CouponsPage } from "@/routes/content.coupons";
 import { NotificationsPage } from "@/routes/content.notifications";
 import { AdminRolesPage } from "@/routes/roles";
@@ -139,6 +140,7 @@ const paymentsSummaryRoute = restrictedRoute(
 
 // Content, Discovery & Roles/Access (Phase 5)
 const contentRoute = protectedRoute("/content", FeaturedContentPage);
+const contentEventsRoute = protectedRoute("/content/events", EventsPage);
 const contentCouponsRoute = protectedRoute("/content/coupons", CouponsPage);
 const contentNotificationsRoute = protectedRoute("/content/notifications", NotificationsPage);
 const rolesRoute = restrictedRoute(
@@ -166,6 +168,7 @@ const routeTree = rootRoute.addChildren([
   paymentsRefundsRoute,
   paymentsSummaryRoute,
   contentRoute,
+  contentEventsRoute,
   contentCouponsRoute,
   contentNotificationsRoute,
   rolesRoute,

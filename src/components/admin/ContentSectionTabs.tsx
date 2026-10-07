@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { label: "Featured Content", href: "/content" },
+  { label: "Events & Tournaments", href: "/content/events" },
   { label: "Coupons", href: "/content/coupons" },
   { label: "Notifications", href: "/content/notifications" },
 ] as const;
