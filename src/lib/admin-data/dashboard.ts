@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabaseClient";
 import type { AdminRole } from "@/lib/admin-auth";
 import { canAccessFinancials } from "@/lib/permissions";
 import { countWhereEqual } from "./alerts";
+import { getReviewCounts } from "./venueChangeRequests";
 
 export type SummaryMetric = {
   id: string;
@@ -48,10 +49,10 @@ function pctDelta(today: number, yesterday: number): { delta: string; direction:
  *  either (it matches admin_financial_summary's existing precedent: any
  *  admin role, gated only by is_admin()). */
 export async function getDashboardSummary(role: AdminRole): Promise<SummaryMetric[]> {
-  const [trend, activeVenues, pendingApprovals, activeUsers, newUsersThisWeek] = await Promise.all([
+  const [trend, activeVenues, reviewCounts, activeUsers, newUsersThisWeek] = await Promise.all([
     getBookingsTrend(2), // just need today + yesterday here
     countWhereEqual("venues", "is_active", true),
-    countWhereEqual("venues", "approval_status", "pending"),
+    getReviewCounts(),
     countWhereEqual("users", "status", "active"),
     supabase
       .from("users")
@@ -96,8 +97,13 @@ export async function getDashboardSummary(role: AdminRole): Promise<SummaryMetri
     {
       id: "pending-approvals",
       label: "Pending Venue Approvals",
-      value: pendingApprovals.toLocaleString("en-IN"),
-      hint: "awaiting review",
+      // New venues + partners' name/address change requests: both sit in the
+      // same review queue and both are waiting on an admin.
+      value: (reviewCounts.pendingVenues + reviewCounts.pendingChangeRequests).toLocaleString("en-IN"),
+      hint:
+        reviewCounts.pendingChangeRequests > 0
+          ? `${reviewCounts.pendingVenues} new · ${reviewCounts.pendingChangeRequests} change request${reviewCounts.pendingChangeRequests === 1 ? "" : "s"}`
+          : "awaiting review",
     },
     {
       id: "active-users",

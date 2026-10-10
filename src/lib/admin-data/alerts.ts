@@ -12,6 +12,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import type { AdminRole } from "@/lib/admin-auth";
 import { canAccessPath } from "@/lib/permissions";
+import { getReviewCounts } from "./venueChangeRequests";
 
 export type AlertSeverity = "critical" | "warning" | "info";
 
@@ -38,8 +39,11 @@ export async function countWhereEqual(table: string, column: string, value: stri
 export async function listAdminAlerts(role: AdminRole): Promise<AlertItem[]> {
   const alerts: AlertItem[] = [];
 
-  const [pendingVenues, flaggedPartners, unresolvedFlags] = await Promise.all([
-    countWhereEqual("venues", "approval_status", "pending"),
+  // Pending venues come from an admin-only function, not a direct count on
+  // venues.approval_status (no longer readable off the raw table — that
+  // count was silently 0).
+  const [{ pendingVenues, pendingChangeRequests }, flaggedPartners, unresolvedFlags] = await Promise.all([
+    getReviewCounts(),
     countWhereEqual("partners", "flagged", true),
     countWhereEqual("booking_flags", "resolution", "unresolved"),
   ]);
@@ -48,6 +52,15 @@ export async function listAdminAlerts(role: AdminRole): Promise<AlertItem[]> {
     alerts.push({
       id: "pending-venues",
       message: `${pendingVenues} venue${pendingVenues === 1 ? "" : "s"} pending approval`,
+      severity: "warning",
+      actionLabel: "Review",
+      href: "/venues/approvals",
+    });
+  }
+  if (pendingChangeRequests > 0) {
+    alerts.push({
+      id: "venue-change-requests",
+      message: `${pendingChangeRequests} venue change request${pendingChangeRequests === 1 ? "" : "s"} awaiting review`,
       severity: "warning",
       actionLabel: "Review",
       href: "/venues/approvals",
