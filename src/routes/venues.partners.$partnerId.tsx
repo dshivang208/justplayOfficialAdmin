@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, Flag, Mail, Phone, ShieldOff, Users } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Flag, Landmark, Mail, Phone, ShieldOff, Smartphone, Users } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
 import { PayoutStatusBadge, VenueStatusBadge } from "@/components/admin/StatusBadge";
@@ -16,7 +16,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { getPartner, flagPartner, unflagPartner, type Partner } from "@/lib/admin-data/partners";
+import {
+  getPartner,
+  flagPartner,
+  unflagPartner,
+  listPartnerPayoutAccounts,
+  type Partner,
+  type PartnerPayoutAccount,
+} from "@/lib/admin-data/partners";
+import { useAdminAuth } from "@/lib/admin-auth";
+import { canAccessFinancials } from "@/lib/permissions";
 import { listVenues, type Venue } from "@/lib/admin-data/venues";
 
 function formatDate(iso: string) {
@@ -99,6 +108,102 @@ function FlagDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function maskAccount(n: string) {
+  return n.length <= 4 ? n : `${"•".repeat(n.length - 4)}${n.slice(-4)}`;
+}
+
+/** Bank/UPI details the venue owner submitted. Super Admin only — the
+ *  database policy returns nothing for anyone else, so this also guards
+ *  the UI rather than relying on the empty result. */
+function PayoutAccountCard({ venueIds }: { venueIds: string[] }) {
+  const { admin } = useAdminAuth();
+  const allowed = admin ? canAccessFinancials(admin.role) : false;
+  const [accounts, setAccounts] = useState<PartnerPayoutAccount[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reveal, setReveal] = useState(false);
+  const key = venueIds.join(",");
+
+  useEffect(() => {
+    if (!allowed) return;
+    let active = true;
+    listPartnerPayoutAccounts(venueIds)
+      .then((a) => active && setAccounts(a))
+      .catch((e: Error) => active && setError(e.message));
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, allowed]);
+
+  return (
+    <div className="surface-card space-y-3 rounded-xl p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-base font-semibold text-foreground">Payout account</h2>
+        {allowed && accounts && accounts.some((a) => a.method === "bank") ? (
+          <button
+            type="button"
+            onClick={() => setReveal((r) => !r)}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary"
+          >
+            {reveal ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {reveal ? "Hide" : "Reveal"} number
+          </button>
+        ) : null}
+      </div>
+      {!allowed ? (
+        <p className="text-sm italic text-muted-foreground">Visible to Super Admins only.</p>
+      ) : error ? (
+        <p className="text-sm text-destructive">Couldn't load payout details: {error}</p>
+      ) : accounts === null ? (
+        <Skeleton className="h-16 w-full" />
+      ) : accounts.length === 0 ? (
+        <p className="text-sm italic text-muted-foreground">No payout details submitted yet.</p>
+      ) : (
+        accounts.map((a) => (
+          <div key={a.venueId} className="space-y-2 text-sm">
+            <div className="flex items-center gap-2 font-semibold text-foreground">
+              {a.method === "bank" ? <Landmark className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
+              {a.method === "bank" ? "Bank account" : "UPI"}
+              <span className="ml-auto">
+                <PayoutStatusBadge status={a.status} />
+              </span>
+            </div>
+            {a.method === "bank" ? (
+              <dl className="space-y-1 text-muted-foreground">
+                <div className="flex justify-between gap-4">
+                  <dt>Account holder</dt>
+                  <dd className="text-right text-foreground">{a.accountHolderName ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt>Account number</dt>
+                  <dd className="text-right font-mono text-foreground">
+                    {a.accountNumber ? (reveal ? a.accountNumber : maskAccount(a.accountNumber)) : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt>IFSC</dt>
+                  <dd className="text-right font-mono text-foreground">{a.ifsc ?? "—"}</dd>
+                </div>
+              </dl>
+            ) : (
+              <dl className="space-y-1 text-muted-foreground">
+                <div className="flex justify-between gap-4">
+                  <dt>UPI ID</dt>
+                  <dd className="text-right font-mono text-foreground">{a.upiId ?? "—"}</dd>
+                </div>
+              </dl>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {a.cashfreeLinked ? "Registered with Cashfree" : "Not yet registered with Cashfree"} · updated{" "}
+              {formatDate(a.updatedAt)}
+            </p>
+          </div>
+        ))
+      )}
+    </div>
   );
 }
 
@@ -298,6 +403,8 @@ export function PartnerDetailPage() {
                 <PayoutStatusBadge status={partner.payoutAccountStatus} />
               </div>
             </div>
+
+            <PayoutAccountCard venueIds={partner.venueIds} />
           </div>
         </div>
       </div>

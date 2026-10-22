@@ -190,3 +190,42 @@ export async function unflagPartner(partnerId: string) {
   if (error) throw new Error(error.message);
   return data as { ok: true; partnerId: string; flagged: boolean };
 }
+
+// ── Payout account details (Super Admin only — enforced by RLS) ─────────
+
+export type PartnerPayoutAccount = {
+  venueId: string;
+  method: "bank" | "upi";
+  accountHolderName: string | null;
+  accountNumber: string | null;
+  ifsc: string | null;
+  upiId: string | null;
+  status: PayoutAccountStatus;
+  cashfreeLinked: boolean;
+  updatedAt: string;
+};
+
+/** The bank/UPI details a partner submitted for their venue(s). The
+ *  `payout_accounts` RLS policy only lets a Super Admin read these rows, so
+ *  an Ops/Support admin simply gets an empty list back. */
+export async function listPartnerPayoutAccounts(venueIds: string[]): Promise<PartnerPayoutAccount[]> {
+  if (venueIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("payout_accounts")
+    .select(
+      "venue_id, method, account_holder_name, account_number, ifsc, upi_id, verification_status, cashfree_beneficiary_id, updated_at",
+    )
+    .in("venue_id", venueIds);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    venueId: r.venue_id as string,
+    method: r.method as "bank" | "upi",
+    accountHolderName: r.account_holder_name as string | null,
+    accountNumber: r.account_number as string | null,
+    ifsc: r.ifsc as string | null,
+    upiId: r.upi_id as string | null,
+    status: r.verification_status as PayoutAccountStatus,
+    cashfreeLinked: Boolean(r.cashfree_beneficiary_id),
+    updatedAt: r.updated_at as string,
+  }));
+}
