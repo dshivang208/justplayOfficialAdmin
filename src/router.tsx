@@ -13,6 +13,7 @@ import { VenuesListPage } from "@/routes/venues";
 import { VenueApprovalsPage } from "@/routes/venues.approvals";
 import { VenueDetailPage } from "@/routes/venues.$venueId";
 import { PartnersListPage } from "@/routes/venues.partners";
+import { VenueCommunityGroupsPage } from "@/routes/venues.community";
 import { PartnerDetailPage } from "@/routes/venues.partners.$partnerId";
 import { BookingsListPage } from "@/routes/bookings";
 import { BookingDisputesPage } from "@/routes/bookings.disputes";
@@ -105,6 +106,7 @@ const dashboardRoute = protectedRoute("/dashboard", DashboardPage);
 const venuesRoute = protectedRoute("/venues", VenuesListPage);
 const venueApprovalsRoute = protectedRoute("/venues/approvals", VenueApprovalsPage);
 const venuePartnersRoute = protectedRoute("/venues/partners", PartnersListPage);
+const venueCommunityRoute = protectedRoute("/venues/community", VenueCommunityGroupsPage);
 const venuePartnerDetailRoute = protectedRoute(
   "/venues/partners/$partnerId",
   PartnerDetailPage,
@@ -156,6 +158,7 @@ const routeTree = rootRoute.addChildren([
   venuesRoute,
   venueApprovalsRoute,
   venuePartnersRoute,
+  venueCommunityRoute,
   venuePartnerDetailRoute,
   venueDetailRoute,
   bookingsRoute,

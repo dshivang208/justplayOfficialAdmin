@@ -11,6 +11,7 @@ const tabs = [
   { label: "All Venues", href: "/venues" },
   { label: "Approval Queue", href: "/venues/approvals" },
   { label: "Partners", href: "/venues/partners" },
+  { label: "Community Groups", href: "/venues/community" },
 ] as const;
 
 export function VenueSectionTabs() {
