@@ -21,6 +21,7 @@ import {
   flagPartner,
   unflagPartner,
   listPartnerPayoutAccounts,
+  setPayoutAccountStatus,
   type Partner,
   type PartnerPayoutAccount,
 } from "@/lib/admin-data/partners";
@@ -118,12 +119,14 @@ function maskAccount(n: string) {
 /** Bank/UPI details the venue owner submitted. Super Admin only — the
  *  database policy returns nothing for anyone else, so this also guards
  *  the UI rather than relying on the empty result. */
-function PayoutAccountCard({ venueIds }: { venueIds: string[] }) {
+function PayoutAccountCard({ venueIds, onChanged }: { venueIds: string[]; onChanged: () => void }) {
   const { admin } = useAdminAuth();
   const allowed = admin ? canAccessFinancials(admin.role) : false;
   const [accounts, setAccounts] = useState<PartnerPayoutAccount[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reveal, setReveal] = useState(false);
+  const [busyVenue, setBusyVenue] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const key = venueIds.join(",");
 
   useEffect(() => {
@@ -136,7 +139,21 @@ function PayoutAccountCard({ venueIds }: { venueIds: string[] }) {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, allowed]);
+  }, [key, allowed, reloadTick]);
+
+  async function changeStatus(venueId: string, status: "verified" | "failed" | "pending") {
+    setBusyVenue(venueId);
+    try {
+      await setPayoutAccountStatus(venueId, status);
+      toast.success(status === "verified" ? "Payout account marked verified" : `Marked ${status}`);
+      setReloadTick((t) => t + 1);
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update the payout account.");
+    } finally {
+      setBusyVenue(null);
+    }
+  }
 
   return (
     <div className="surface-card space-y-3 rounded-xl p-5">
@@ -196,6 +213,23 @@ function PayoutAccountCard({ venueIds }: { venueIds: string[] }) {
                 </div>
               </dl>
             )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {a.status !== "verified" ? (
+                <Button size="sm" disabled={busyVenue === a.venueId} onClick={() => void changeStatus(a.venueId, "verified")}>
+                  Mark verified
+                </Button>
+              ) : null}
+              {a.status !== "failed" ? (
+                <Button size="sm" variant="outline" disabled={busyVenue === a.venueId} onClick={() => void changeStatus(a.venueId, "failed")}>
+                  Mark failed
+                </Button>
+              ) : null}
+              {a.status !== "pending" ? (
+                <Button size="sm" variant="outline" disabled={busyVenue === a.venueId} onClick={() => void changeStatus(a.venueId, "pending")}>
+                  Reset to pending
+                </Button>
+              ) : null}
+            </div>
             <p className="text-xs text-muted-foreground">
               {a.cashfreeLinked ? "Registered with Cashfree" : "Not yet registered with Cashfree"} · updated{" "}
               {formatDate(a.updatedAt)}
@@ -404,7 +438,10 @@ export function PartnerDetailPage() {
               </div>
             </div>
 
-            <PayoutAccountCard venueIds={partner.venueIds} />
+            <PayoutAccountCard
+              venueIds={partner.venueIds}
+              onChanged={() => void getPartner(partnerId).then((p) => setPartner(p))}
+            />
           </div>
         </div>
       </div>

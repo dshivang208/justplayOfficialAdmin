@@ -229,3 +229,14 @@ export async function listPartnerPayoutAccounts(venueIds: string[]): Promise<Par
     updatedAt: r.updated_at as string,
   }));
 }
+
+/** Super Admin only (enforced in the database): manually mark a venue's
+ *  payout account verified / failed / pending. Used while Cashfree
+ *  auto-verification isn't configured. Audit-logged server-side. */
+export async function setPayoutAccountStatus(venueId: string, status: "verified" | "failed" | "pending") {
+  const { error } = await supabase.rpc("admin_set_payout_account_status", {
+    p_venue_id: venueId,
+    p_status: status,
+  });
+  if (error) throw new Error(error.message);
+}
