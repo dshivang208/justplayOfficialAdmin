@@ -131,3 +131,21 @@ export function RefundRequestStatusBadge({
   if (status === "pending") return <StatusPill label="Awaiting review" tone="warning" />;
   return <StatusPill label="Rejected" tone="critical" />;
 }
+export function TicketStatusBadge({
+  status,
+}: {
+  status: "open" | "in_progress" | "waiting_user" | "resolved" | "closed";
+}) {
+  if (status === "open") return <StatusPill label="Open" tone="warning" />;
+  if (status === "in_progress") return <StatusPill label="In progress" tone="primary" />;
+  if (status === "waiting_user") return <StatusPill label="Waiting on player" tone="muted" />;
+  if (status === "resolved") return <StatusPill label="Resolved" tone="primary" />;
+  return <StatusPill label="Closed" tone="muted" />;
+}
+
+export function TicketPriorityBadge({ priority }: { priority: "low" | "normal" | "high" | "urgent" }) {
+  if (priority === "urgent") return <StatusPill label="Urgent" tone="critical" />;
+  if (priority === "high") return <StatusPill label="High" tone="warning" />;
+  if (priority === "low") return <StatusPill label="Low" tone="muted" />;
+  return <StatusPill label="Normal" tone="muted" />;
+}
