@@ -13,6 +13,7 @@ import {
 } from "@/lib/admin-data/support";
 
 type Tab = "needs_reply" | "open" | "waiting" | "resolved" | "all";
+type Source = "all" | "player" | "partner";
 
 const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2, low: 3 } as const;
 
@@ -31,6 +32,7 @@ export function SupportInboxPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("needs_reply");
   const [query, setQuery] = useState("");
+  const [source, setSource] = useState<Source>("all");
 
   const load = useCallback(async () => {
     try {
@@ -66,9 +68,11 @@ export function SupportInboxPage() {
         if (tab === "resolved") return t.status === "resolved" || t.status === "closed";
         return true;
       })
+      .filter((t) => source === "all" || t.source === source)
       .filter(
         (t) =>
           !q ||
+          (t.venueName ?? "").toLowerCase().includes(q) ||
           String(t.ticketNo) === q ||
           t.subject.toLowerCase().includes(q) ||
           t.userName.toLowerCase().includes(q) ||
@@ -80,7 +84,7 @@ export function SupportInboxPage() {
             new Date(a.lastMessageAt).getTime() - new Date(b.lastMessageAt).getTime()
           : new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
       );
-  }, [tickets, tab, query]);
+  }, [tickets, tab, query, source]);
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "needs_reply", label: "Needs reply", count: counts?.awaitingReply },
@@ -111,7 +115,22 @@ export function SupportInboxPage() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-1.5">
+        <div className="mt-5 flex flex-wrap items-center gap-1.5">
+          <div className="mr-2 flex overflow-hidden rounded-full border border-border text-xs font-semibold">
+            {(["all", "player", "partner"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setSource(k)}
+                className={
+                  "px-3 py-1.5 capitalize " +
+                  (source === k ? "bg-foreground text-background" : "bg-background text-muted-foreground")
+                }
+              >
+                {k === "all" ? "Everyone" : k + "s"}
+              </button>
+            ))}
+          </div>
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -169,6 +188,7 @@ export function SupportInboxPage() {
                         <span className="text-muted-foreground">#{t.ticketNo}</span> {t.subject}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {t.source === "partner" ? `Partner · ${t.venueName ?? "Venue"} · ` : ""}
                         {t.userName}
                         {t.userPhone ? ` · ${t.userPhone}` : ""} · {CATEGORY_LABELS[t.category]} ·{" "}
                         {t.lastSenderKind === "user" ? "Player replied" : "Team replied"}{" "}

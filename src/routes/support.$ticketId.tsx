@@ -142,9 +142,26 @@ export function SupportTicketPage() {
               <span className="text-muted-foreground">#{t.ticketNo}</span> {t.subject}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              <Link to="/users/$userId" params={{ userId: t.userId }} className="font-semibold text-primary hover:underline">
-                {t.userName}
-              </Link>
+              {t.source === "partner" ? (
+                <>
+                  <span className="mr-1.5 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">
+                    Partner
+                  </span>
+                  {t.venueId ? (
+                    <Link to="/venues/$venueId" params={{ venueId: t.venueId }} className="font-semibold text-primary hover:underline">
+                      {t.venueName ?? "Venue"}
+                    </Link>
+                  ) : null}
+                  {" · "}
+                  {t.userName}
+                </>
+              ) : t.userId ? (
+                <Link to="/users/$userId" params={{ userId: t.userId }} className="font-semibold text-primary hover:underline">
+                  {t.userName}
+                </Link>
+              ) : (
+                t.userName
+              )}
               {t.userPhone ? ` · ${t.userPhone}` : ""} · {CATEGORY_LABELS[t.category]} · opened{" "}
               {dayLabel(t.createdAt)}
             </p>
@@ -174,7 +191,7 @@ export function SupportTicketPage() {
                     <div className={`flex flex-col ${fromAdmin ? "items-end" : "items-start"}`}>
                       <span className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
                         {m.internal ? <Lock className="h-3 w-3" /> : null}
-                        {fromAdmin ? (m.internal ? "Internal note" : "Support team") : t.userName}
+                        {fromAdmin ? (m.internal ? "Internal note" : "Support team") : t.source === "partner" ? `${t.venueName ?? "Venue"} (partner)` : t.userName}
                       </span>
                       <div
                         className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm ${
@@ -292,9 +309,15 @@ export function SupportTicketPage() {
 
             <div className="surface-card space-y-2 rounded-xl p-4 text-sm">
               <p className="text-xs font-semibold text-muted-foreground">Context</p>
-              <Link to="/users/$userId" params={{ userId: t.userId }} className="block font-semibold text-primary hover:underline">
-                View {t.userName}'s profile
-              </Link>
+              {t.source === "partner" && t.venueId ? (
+                <Link to="/venues/$venueId" params={{ venueId: t.venueId }} className="block font-semibold text-primary hover:underline">
+                  View {t.venueName ?? "venue"}
+                </Link>
+              ) : t.userId ? (
+                <Link to="/users/$userId" params={{ userId: t.userId }} className="block font-semibold text-primary hover:underline">
+                  View {t.userName}'s profile
+                </Link>
+              ) : null}
               {t.bookingId ? (
                 <Link to="/bookings/$bookingId" params={{ bookingId: t.bookingId }} className="block font-semibold text-primary hover:underline">
                   View linked booking
