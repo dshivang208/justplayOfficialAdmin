@@ -5,6 +5,7 @@ const tabs = [
   { label: "Featured Content", href: "/content" },
   { label: "Events & Tournaments", href: "/content/events" },
   { label: "Coupons", href: "/content/coupons" },
+  { label: "Referrals & Points", href: "/content/referrals" },
   { label: "Notifications", href: "/content/notifications" },
 ] as const;
 

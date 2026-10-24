@@ -27,6 +27,7 @@ import { FinancialSummaryPage } from "@/routes/payments.summary";
 import { FeaturedContentPage } from "@/routes/content";
 import { EventsPage } from "@/routes/content.events";
 import { CouponsPage } from "@/routes/content.coupons";
+import { ReferralsPage } from "@/routes/content.referrals";
 import { NotificationsPage } from "@/routes/content.notifications";
 import { AdminRolesPage } from "@/routes/roles";
 import { SupportInboxPage } from "@/routes/support";
@@ -146,6 +147,7 @@ const paymentsSummaryRoute = restrictedRoute(
 const contentRoute = protectedRoute("/content", FeaturedContentPage);
 const contentEventsRoute = protectedRoute("/content/events", EventsPage);
 const contentCouponsRoute = protectedRoute("/content/coupons", CouponsPage);
+const contentReferralsRoute = protectedRoute("/content/referrals", ReferralsPage);
 const contentNotificationsRoute = protectedRoute("/content/notifications", NotificationsPage);
 const supportRoute = protectedRoute("/support", SupportInboxPage);
 const supportTicketRoute = protectedRoute("/support/$ticketId", SupportTicketPage);
@@ -179,6 +181,7 @@ const routeTree = rootRoute.addChildren([
   contentRoute,
   contentEventsRoute,
   contentCouponsRoute,
+  contentReferralsRoute,
   contentNotificationsRoute,
   rolesRoute,
 ]);
