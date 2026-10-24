@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAdminAuth } from "@/lib/admin-auth";
+import { listAdminNames } from "@/lib/admin-data/admins";
 import { supabase } from "@/lib/supabaseClient";
 import {
   CATEGORY_LABELS,
@@ -35,6 +36,14 @@ export function SupportTicketPage() {
   const { ticketId } = useParams({ from: "/support/$ticketId" });
   const { admin } = useAdminAuth();
   const [ticket, setTicket] = useState<SupportTicket | null | undefined>(undefined);
+  // Ownership only matters when more than one person works the inbox, so the
+  // Owner block stays hidden for a solo admin (or if the team can't be read).
+  const [team, setTeam] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    listAdminNames()
+      .then(setTeam)
+      .catch(() => setTeam([]));
+  }, []);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -103,6 +112,8 @@ export function SupportTicketPage() {
 
   const t = ticket;
   const mine = admin?.id != null && t.assignedAdminId === admin.id;
+  const hasTeam = team.length > 1;
+  const owner = team.find((m) => m.id === t.assignedAdminId);
 
   async function run(fn: () => Promise<void>, ok?: string) {
     setBusy(true);
@@ -291,20 +302,31 @@ export function SupportTicketPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Owner</p>
-                {mine ? (
-                  <Button variant="outline" size="sm" className="w-full" disabled={busy}
-                    onClick={() => void run(() => updateTicket(t.id, { assign: false }), "Unassigned")}>
-                    <UserCheck className="h-4 w-4" /> Assigned to you · Unassign
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" className="w-full" disabled={busy}
-                    onClick={() => void run(() => updateTicket(t.id, { assign: true }), "Assigned to you")}>
-                    {t.assignedAdminId ? "Assigned to a teammate · Take over" : "Assign to me"}
-                  </Button>
-                )}
-              </div>
+              {hasTeam ? (
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Owner</p>
+                  {mine ? (
+                    <Button variant="outline" size="sm" className="w-full" disabled={busy}
+                      onClick={() => void run(() => updateTicket(t.id, { assign: false }), "Unassigned")}>
+                      <UserCheck className="h-4 w-4" /> Assigned to you · Unassign
+                    </Button>
+                  ) : (
+                    <>
+                      {t.assignedAdminId ? (
+                        <p className="mb-1.5 text-sm font-medium text-foreground">
+                          {owner ? owner.name : "A teammate"} is handling this
+                        </p>
+                      ) : (
+                        <p className="mb-1.5 text-sm text-muted-foreground">Unassigned — nobody owns this yet</p>
+                      )}
+                      <Button variant="outline" size="sm" className="w-full" disabled={busy}
+                        onClick={() => void run(() => updateTicket(t.id, { assign: true }), "Assigned to you")}>
+                        {t.assignedAdminId ? "Take over" : "Assign to me"}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             <div className="surface-card space-y-2 rounded-xl p-4 text-sm">

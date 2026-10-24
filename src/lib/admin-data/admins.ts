@@ -80,3 +80,11 @@ export async function removeAdmin(id: string) {
   const { error } = await supabase.rpc("admin_remove_admin", { p_admin_id: id });
   if (error) throw new Error(error.message);
 }
+/** id + name of every admin — readable by any admin (Ops/Support included). */
+export async function listAdminNames(): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase.rpc("admin_team_names");
+  if (!error && data) return data as { id: string; name: string }[];
+  // RPC not installed yet — Super Admins can still read the table directly.
+  const team = await listAdminTeam();
+  return team.map((m) => ({ id: m.id, name: m.name }));
+}
