@@ -35,6 +35,7 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
+import { detachPushFromAccount } from "./push";
 
 export type AdminRole = "Super Admin" | "Ops/Support";
 
@@ -242,9 +243,12 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    void supabase.auth.signOut();
     setSession(null);
     setAdmin(null);
+    // Detach this browser's push token while the session is still valid.
+    void detachPushFromAccount()
+      .then(() => supabase.auth.signOut())
+      .catch((e) => console.error("signOut failed:", e));
   }, []);
 
   const value = useMemo<AuthContextValue>(

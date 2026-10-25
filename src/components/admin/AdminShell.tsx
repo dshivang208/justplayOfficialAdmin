@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Bell, LogOut, Menu, Search, X } from "lucide-react";
+import { Bell, BellRing, LogOut, Menu, Search, X } from "lucide-react";
+import { toast } from "sonner";
+import { onForegroundPush, refreshPushToken } from "@/lib/push";
+import { usePush } from "@/lib/usePush";
 import { cn } from "@/lib/utils";
 import { navItems, BUILT_THROUGH_PHASE } from "@/lib/nav";
 import { useAdminAuth } from "@/lib/admin-auth";
@@ -101,6 +104,33 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   }, [role]);
 
   const alertCount = visibleAlerts.length;
+  const push = usePush("admin");
+
+  useEffect(() => {
+    if (push.error) toast.error(push.error);
+  }, [push.error]);
+
+  // Keep this browser's token on the admin account; show pushes that arrive
+  // while the console is open and refresh the alert count.
+  useEffect(() => {
+    if (!admin) return;
+    void refreshPushToken("admin");
+    let off: (() => void) | undefined;
+    let cancelled = false;
+    void onForegroundPush((m) => {
+      toast(m.title, { description: m.body });
+      listAdminAlerts(role)
+        .then(setVisibleAlerts)
+        .catch(() => undefined);
+    }).then((u) => {
+      if (cancelled) u();
+      else off = u;
+    });
+    return () => {
+      cancelled = true;
+      off?.();
+    };
+  }, [admin, role]);
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/90 px-4 backdrop-blur">
@@ -190,6 +220,21 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
               Signed in as {admin?.email}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {push.state === "default" ? (
+              <DropdownMenuItem disabled={push.busy} onClick={() => void push.enable()}>
+                <BellRing className="h-4 w-4" />
+                Enable push notifications
+              </DropdownMenuItem>
+            ) : push.state === "enabled" ? (
+              <DropdownMenuItem disabled={push.busy} onClick={() => void push.disable()}>
+                <BellRing className="h-4 w-4" />
+                Turn off push on this device
+              </DropdownMenuItem>
+            ) : push.state === "denied" ? (
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Push is blocked in your browser settings.
+              </DropdownMenuLabel>
+            ) : null}
             <DropdownMenuItem
               onClick={() => {
                 logout();
