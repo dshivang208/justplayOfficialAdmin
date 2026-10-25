@@ -8,6 +8,7 @@ import {
 } from "@/components/admin/BookingsTrendChart";
 import { AlertsPanel, AlertsPanelSkeleton } from "@/components/admin/AlertsPanel";
 import { ActivityFeed, ActivityFeedSkeleton } from "@/components/admin/ActivityFeed";
+import { AnalyticsSection } from "@/components/admin/analytics/AnalyticsSection";
 import {
   getDashboardSummary,
   getBookingsTrend,
@@ -149,8 +150,11 @@ export function DashboardPage() {
               </div>
             </div>
 
+            {/* Advanced analytics: period + venue pickers, KPIs, charts, venue revenue */}
+            <AnalyticsSection />
+
             {/* Recent activity */}
-            <div className="mt-6">
+            <div className="mt-8">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold text-foreground">
                   Recent activity

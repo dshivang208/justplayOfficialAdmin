@@ -8,12 +8,14 @@ const typeStyles: Record<ActivityType, { icon: typeof CalendarPlus; className: s
   venue_signup: { icon: Building2, className: "bg-accent/15 text-accent-foreground" },
 };
 
-function timeAgo(iso: string) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.max(1, Math.round(diffMs / 60000));
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.round(mins / 60);
-  return `${hours}h ago`;
+const IST = "Asia/Kolkata";
+
+/** "25 Oct 2026" and "9:41 PM", always in Kanpur time. */
+function formatWhen(iso: string) {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: IST });
+  const time = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: IST });
+  return { date, time: time.toUpperCase() };
 }
 
 export function ActivityFeed({ items }: { items: ActivityItem[] }) {
@@ -42,7 +44,10 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
               <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
               <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
             </div>
-            <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(item.timestamp)}</span>
+            <time dateTime={item.timestamp} className="shrink-0 text-right leading-tight">
+              <span className="block text-xs font-medium text-foreground">{formatWhen(item.timestamp).date}</span>
+              <span className="block text-[11px] text-muted-foreground">{formatWhen(item.timestamp).time}</span>
+            </time>
           </li>
         );
       })}

@@ -293,7 +293,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar onMenuClick={() => setMobileOpen(true)} />
         <main className="flex-1 bg-background">{children}</main>
       </div>
