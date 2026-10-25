@@ -147,7 +147,15 @@ function friendlyPushError(e: unknown): Error {
   return new Error(name ? `${name}: ${msg}` : msg);
 }
 
-async function fetchToken(): Promise<string> {
+let inFlight: Promise<string> | null = null;
+
+/** One token request at a time: enable-click and the sign-in top-up often overlap and would mint duplicates. */
+function fetchToken(): Promise<string> {
+  if (!inFlight) inFlight = fetchTokenOnce().finally(() => (inFlight = null));
+  return inFlight;
+}
+
+async function fetchTokenOnce(): Promise<string> {
   const problem = configProblem();
   if (problem) throw new Error(problem);
   const messaging = await getMessagingInstance();
