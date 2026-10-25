@@ -17,13 +17,15 @@ export type PushApp = "consumer" | "partner" | "admin";
 export type PushState = "unsupported" | "unconfigured" | "denied" | "enabled" | "default";
 
 const env = import.meta.env as Record<string, string | undefined>;
+// trim: a stray space/newline pasted into a host's env UI silently breaks the key
+const clean = (v: string | undefined) => (v ?? "").trim().replace(/^["']|["']$/g, "");
 const firebaseConfig = {
-  apiKey: env["VITE_FIREBASE_API_KEY"] ?? "",
-  projectId: env["VITE_FIREBASE_PROJECT_ID"] ?? "",
-  messagingSenderId: env["VITE_FIREBASE_MESSAGING_SENDER_ID"] ?? "",
-  appId: env["VITE_FIREBASE_APP_ID"] ?? "",
+  apiKey: clean(env["VITE_FIREBASE_API_KEY"]),
+  projectId: clean(env["VITE_FIREBASE_PROJECT_ID"]),
+  messagingSenderId: clean(env["VITE_FIREBASE_MESSAGING_SENDER_ID"]),
+  appId: clean(env["VITE_FIREBASE_APP_ID"]),
 };
-const WEB_PUSH_KEY = env["VITE_FIREBASE_VAPID_KEY"] ?? "";
+const WEB_PUSH_KEY = clean(env["VITE_FIREBASE_VAPID_KEY"]);
 const TOKEN_KEY = "jp_fcm_token";
 
 export const pushConfigured = Boolean(
@@ -92,14 +94,83 @@ async function registerWorker(): Promise<ServiceWorkerRegistration> {
   return reg;
 }
 
+/** Drop leftovers from the old VAPID setup (public/sw.js) and any stale push subscription. */
+async function clearStalePush(): Promise<void> {
+  const regs = await navigator.serviceWorker.getRegistrations();
+  for (const r of regs) {
+    const url = r.active?.scriptURL ?? r.waiting?.scriptURL ?? r.installing?.scriptURL ?? "";
+    if (url.endsWith("/sw.js")) {
+      try {
+        await (await r.pushManager.getSubscription())?.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      await r.unregister();
+    }
+  }
+}
+
+/** Catches the most common setup mistake before the browser gives its vague error. */
+function configProblem(): string | null {
+  if (!/^\d+$/.test(firebaseConfig.messagingSenderId)) {
+    return "VITE_FIREBASE_MESSAGING_SENDER_ID must be digits only (check it was copied from Firebase and has no extra text).";
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(WEB_PUSH_KEY)) {
+    return "VITE_FIREBASE_VAPID_KEY contains invalid characters — paste only the key from Firebase > Cloud Messaging > Web Push certificates.";
+  }
+  try {
+    const b64 = WEB_PUSH_KEY.replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+    if (raw.length !== 65 || raw.charCodeAt(0) !== 4) {
+      return `VITE_FIREBASE_VAPID_KEY is not a valid Web Push key (length ${WEB_PUSH_KEY.length}, expected 87 starting with "B"). Copy the full key again from Firebase.`;
+    }
+  } catch {
+    return "VITE_FIREBASE_VAPID_KEY is not valid base64 — copy the full key again from Firebase.";
+  }
+  return null;
+}
+
+function friendlyPushError(e: unknown): Error {
+  const msg = e instanceof Error ? e.message : String(e);
+  const name = e instanceof Error ? e.name : "";
+  if (/push service error|AbortError/i.test(msg + name)) {
+    return new Error(
+      `Push registration was rejected by the browser's push service (${name || "AbortError"}). Check the Firebase Web Push key and Firebase settings, your network (no VPN/private DNS), then try again.`,
+    );
+  }
+  if (/permission-blocked|denied/i.test(msg)) {
+    return new Error("Notifications are blocked for this site — allow them in your browser's site settings.");
+  }
+  if (/token-subscribe-failed|401|403|API key|not valid/i.test(msg)) {
+    return new Error("Push setup is misconfigured (Firebase API key / project mismatch). Please contact support.");
+  }
+  return new Error(name ? `${name}: ${msg}` : msg);
+}
+
 async function fetchToken(): Promise<string> {
+  const problem = configProblem();
+  if (problem) throw new Error(problem);
   const messaging = await getMessagingInstance();
   if (!messaging) throw new Error("This browser doesn't support push notifications.");
-  const { getToken } = await import("firebase/messaging");
-  const token = await getToken(messaging, {
-    vapidKey: WEB_PUSH_KEY,
-    serviceWorkerRegistration: await registerWorker(),
-  });
+  const { getToken, deleteToken } = await import("firebase/messaging");
+  await clearStalePush();
+  const serviceWorkerRegistration = await registerWorker();
+
+  const attempt = () => getToken(messaging, { vapidKey: WEB_PUSH_KEY, serviceWorkerRegistration });
+  let token: string | undefined;
+  try {
+    token = await attempt();
+  } catch (first) {
+    // Typical cause: an older subscription made with a different key. Wipe it and retry once.
+    console.error("getToken failed, retrying clean:", first instanceof Error ? first.message : first);
+    try {
+      await (await serviceWorkerRegistration.pushManager.getSubscription())?.unsubscribe();
+      await deleteToken(messaging).catch(() => undefined);
+      token = await attempt();
+    } catch (second) {
+      throw friendlyPushError(second);
+    }
+  }
   if (!token) throw new Error("Couldn't get a notification token. Try again.");
   return token;
 }
