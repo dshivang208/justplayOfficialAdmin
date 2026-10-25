@@ -20,13 +20,19 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   const d = payload.data || {};
-  return self.registration.showNotification(d.title || "JustPlay", {
+  const options = {
     body: d.body || "",
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
+    icon: "/icons/notification-icon-192.png", // JustPlay logo, shown large beside the text
+    badge: "/icons/notification-badge-96.png", // small monochrome mark in the Android status bar
+    vibrate: [120, 60, 120],
+    timestamp: Date.now(),
     tag: d.tag || undefined,
+    renotify: Boolean(d.tag),
     data: { url: d.url || "/" },
-  });
+    actions: [{ action: "open", title: "View" }],
+  };
+  if (d.image) options.image = d.image; // optional banner (Zomato-style rich card)
+  return self.registration.showNotification(d.title || "JustPlay", options);
 });
 
 self.addEventListener("notificationclick", (event) => {
