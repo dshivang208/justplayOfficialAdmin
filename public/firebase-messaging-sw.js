@@ -9,6 +9,10 @@
  */
 importScripts("/firebase-vendor/firebase-app-compat.js", "/firebase-vendor/firebase-messaging-compat.js");
 
+// Take over from an older worker immediately instead of waiting for every tab to close.
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+
 const params = new URL(self.location.href).searchParams;
 firebase.initializeApp({
   apiKey: params.get("apiKey"),
@@ -22,8 +26,8 @@ messaging.onBackgroundMessage((payload) => {
   const d = payload.data || {};
   const options = {
     body: d.body || "",
-    icon: "/icons/notification-icon-192.png", // JustPlay logo, shown large beside the text
-    badge: "/icons/notification-badge-96.png", // small monochrome mark in the Android status bar
+    icon: self.location.origin + "/icons/notification-icon-192.png", // JustPlay logo, shown large beside the text
+    badge: self.location.origin + "/icons/notification-badge-96.png", // small monochrome mark in the Android status bar
     vibrate: [120, 60, 120],
     timestamp: Date.now(),
     tag: d.tag || undefined,
