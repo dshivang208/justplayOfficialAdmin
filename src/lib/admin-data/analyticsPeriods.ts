@@ -16,12 +16,15 @@ export const toDate = (iso: string) => {
   return new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1));
 };
 export const toISO = (d: Date) => d.toISOString().slice(0, 10);
-export const addDays = (iso: string, n: number) => toISO(new Date(toDate(iso).getTime() + n * DAY_MS));
+export const addDays = (iso: string, n: number) =>
+  toISO(new Date(toDate(iso).getTime() + n * DAY_MS));
 export const daysBetween = (from: string, to: string) =>
   Math.round((toDate(to).getTime() - toDate(from).getTime()) / DAY_MS) + 1;
 
 export function todayIST(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(
+    new Date(),
+  );
 }
 
 export function startOfWeek(iso: string): string {
@@ -29,11 +32,15 @@ export function startOfWeek(iso: string): string {
   return addDays(iso, -dow);
 }
 
-const lastDayOfMonth = (y: number, m0: number) => new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate();
+const lastDayOfMonth = (y: number, m0: number) =>
+  new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate();
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** The week / month / quarter / year that contains `anchor`. */
-export function periodFor(kind: Exclude<PeriodKind, "custom">, anchor: string): Period {
+export function periodFor(
+  kind: Exclude<PeriodKind, "custom">,
+  anchor: string,
+): Period {
   const d = toDate(anchor);
   const y = d.getUTCFullYear();
   const m = d.getUTCMonth();
@@ -43,10 +50,18 @@ export function periodFor(kind: Exclude<PeriodKind, "custom">, anchor: string): 
       return { kind, from, to: addDays(from, 6) };
     }
     case "month":
-      return { kind, from: `${y}-${pad(m + 1)}-01`, to: `${y}-${pad(m + 1)}-${pad(lastDayOfMonth(y, m))}` };
+      return {
+        kind,
+        from: `${y}-${pad(m + 1)}-01`,
+        to: `${y}-${pad(m + 1)}-${pad(lastDayOfMonth(y, m))}`,
+      };
     case "quarter": {
       const q0 = Math.floor(m / 3) * 3;
-      return { kind, from: `${y}-${pad(q0 + 1)}-01`, to: `${y}-${pad(q0 + 3)}-${pad(lastDayOfMonth(y, q0 + 2))}` };
+      return {
+        kind,
+        from: `${y}-${pad(q0 + 1)}-01`,
+        to: `${y}-${pad(q0 + 3)}-${pad(lastDayOfMonth(y, q0 + 2))}`,
+      };
     }
     case "year":
       return { kind, from: `${y}-01-01`, to: `${y}-12-31` };
@@ -57,18 +72,44 @@ export function periodFor(kind: Exclude<PeriodKind, "custom">, anchor: string): 
 export function shiftPeriod(p: Period, dir: -1 | 1): Period {
   if (p.kind === "custom") {
     const len = daysBetween(p.from, p.to);
-    return { kind: "custom", from: addDays(p.from, dir * len), to: addDays(p.to, dir * len) };
+    return {
+      kind: "custom",
+      from: addDays(p.from, dir * len),
+      to: addDays(p.to, dir * len),
+    };
   }
   const anchor =
     p.kind === "week"
       ? addDays(p.from, dir * 7)
       : p.kind === "year"
         ? `${toDate(p.from).getUTCFullYear() + dir}-06-15`
-        : toISO(new Date(Date.UTC(toDate(p.from).getUTCFullYear(), toDate(p.from).getUTCMonth() + dir * (p.kind === "month" ? 1 : 3), 15)));
+        : toISO(
+            new Date(
+              Date.UTC(
+                toDate(p.from).getUTCFullYear(),
+                toDate(p.from).getUTCMonth() +
+                  dir * (p.kind === "month" ? 1 : 3),
+                15,
+              ),
+            ),
+          );
   return periodFor(p.kind, anchor);
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 export const fmtDay = (iso: string, withYear = false) => {
   const d = toDate(iso);
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}${withYear ? ` ${d.getUTCFullYear()}` : ""}`;
@@ -92,13 +133,16 @@ export function periodLabel(p: Period): string {
 }
 
 export const compareLabel = (p: Period) =>
-  p.kind === "custom" ? `previous ${daysBetween(p.from, p.to)} days` : `previous ${p.kind}`;
+  p.kind === "custom"
+    ? `previous ${daysBetween(p.from, p.to)} days`
+    : `previous ${p.kind}`;
 
 export function granularityFor(p: Period): Granularity {
   const days = daysBetween(p.from, p.to);
   if (p.kind === "year") return "month";
   if (p.kind === "quarter") return "week";
-  if (p.kind === "custom") return days <= 45 ? "day" : days <= 200 ? "week" : "month";
+  if (p.kind === "custom")
+    return days <= 45 ? "day" : days <= 200 ? "week" : "month";
   return "day";
 }
 
@@ -108,7 +152,10 @@ export function isCurrent(p: Period, today = todayIST()): boolean {
 export const isFuture = (p: Period, today = todayIST()) => p.from > today;
 
 /** Selectable periods, newest first, ending with the one containing today. */
-export function recentPeriods(kind: Exclude<PeriodKind, "custom">, today = todayIST()): Period[] {
+export function recentPeriods(
+  kind: Exclude<PeriodKind, "custom">,
+  today = todayIST(),
+): Period[] {
   const count = { week: 26, month: 24, quarter: 12, year: 5 }[kind];
   const out: Period[] = [periodFor(kind, today)];
   for (let i = 1; i < count; i++) out.push(shiftPeriod(out[i - 1]!, -1));
@@ -118,6 +165,7 @@ export function recentPeriods(kind: Exclude<PeriodKind, "custom">, today = today
 /** Bucket label for a chart axis. */
 export function bucketLabel(iso: string, g: Granularity): string {
   const d = toDate(iso);
-  if (g === "month") return `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`;
+  if (g === "month")
+    return `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`;
   return fmtDay(iso);
 }

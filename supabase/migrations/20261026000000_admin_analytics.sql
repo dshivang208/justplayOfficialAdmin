@@ -18,8 +18,18 @@
 -- Every function is admin-only (is_admin()). Idempotent — safe to re-run.
 -- ============================================================================
 
+-- Optional sport filter (p_sport) on every function: bookings.sport, e.g. 'Box Cricket'.
+-- The old 3/4-argument versions are dropped first so the new optional argument
+-- never makes a call ambiguous.
+drop function if exists public.admin_analytics_overview(date, date, uuid);
+drop function if exists public.admin_analytics_timeseries(date, date, text, uuid);
+drop function if exists public.admin_analytics_venues(date, date);
+drop function if exists public.admin_analytics_breakdown(date, date, uuid);
+drop function if exists public._an_kpis(date, date, uuid);
+drop function if exists public._an_bookings(date, date, uuid);
+
 -- ── 0. Internal row source ──────────────────────────────────────────────────
-create or replace function public._an_bookings(p_from date, p_to date, p_venue uuid default null)
+create or replace function public._an_bookings(p_from date, p_to date, p_venue uuid default null, p_sport text default null)
 returns table (
   id uuid, venue_id uuid, user_id uuid, sport text, day date, play_date date,
   source text, valid boolean, cancelled boolean, gmv integer, commission integer,
@@ -60,12 +70,13 @@ as $$
   ) c on true
   where public.is_admin()
     and (b.created_at at time zone 'Asia/Kolkata')::date between p_from and p_to
-    and (p_venue is null or b.venue_id = p_venue);
+    and (p_venue is null or b.venue_id = p_venue)
+    and (p_sport is null or b.sport = p_sport);
 $$;
-revoke all on function public._an_bookings(date, date, uuid) from public, anon, authenticated;
+revoke all on function public._an_bookings(date, date, uuid, text) from public, anon, authenticated;
 
 -- ── 1. KPI block for one period ─────────────────────────────────────────────
-create or replace function public._an_kpis(p_from date, p_to date, p_venue uuid default null)
+create or replace function public._an_kpis(p_from date, p_to date, p_venue uuid default null, p_sport text default null)
 returns jsonb
 language plpgsql
 stable
@@ -94,10 +105,11 @@ begin
     count(distinct venue_id) filter (where valid)              as active_venues,
     avg(lead_days) filter (where valid and lead_days >= 0)     as lead_days
   into r
-  from public._an_bookings(p_from, p_to, p_venue);
+  from public._an_bookings(p_from, p_to, p_venue, p_sport);
 
   select count(*) into v_live from public.venues
-   where is_active and approval_status = 'approved' and (p_venue is null or id = p_venue);
+   where is_active and approval_status = 'approved' and (p_venue is null or id = p_venue)
+     and (p_sport is null or exists (select 1 from public.courts ct where ct.venue_id = venues.id and ct.sport = p_sport));
 
   -- Customers whose first-ever booking (at this venue, if filtered) falls in the period.
   with firsts as (
@@ -105,6 +117,7 @@ begin
     from public.bookings
     where status in ('confirmed', 'completed') and user_id is not null
       and (p_venue is null or venue_id = p_venue)
+      and (p_sport is null or sport = p_sport)
     group by user_id
   )
   select count(*) filter (where first_day between p_from and p_to),
@@ -112,13 +125,13 @@ begin
     into v_new_customers, v_repeat
   from firsts f
   where exists (
-    select 1 from public._an_bookings(p_from, p_to, p_venue) x
+    select 1 from public._an_bookings(p_from, p_to, p_venue, p_sport) x
     where x.valid and x.user_id = f.user_id
   );
   -- returning customers also include anyone who booked 2+ times inside the period
   v_repeat := v_repeat + (
     select count(*) from (
-      select user_id from public._an_bookings(p_from, p_to, p_venue) x
+      select user_id from public._an_bookings(p_from, p_to, p_venue, p_sport) x
       where x.valid and x.user_id is not null
       group by user_id having count(*) >= 2
     ) m
@@ -127,6 +140,7 @@ begin
       where pb.user_id = m.user_id and pb.status in ('confirmed', 'completed')
         and (pb.created_at at time zone 'Asia/Kolkata')::date < p_from
         and (p_venue is null or pb.venue_id = p_venue)
+        and (p_sport is null or pb.sport = p_sport)
     )
   );
 
@@ -134,14 +148,16 @@ begin
          count(*) filter (where s.status = 'available')
     into v_slots_booked, v_slots_open
   from public.slots s
-  where s.date between p_from and p_to and (p_venue is null or s.venue_id = p_venue);
+  where s.date between p_from and p_to and (p_venue is null or s.venue_id = p_venue)
+    and (p_sport is null or s.sport = p_sport);
 
   select coalesce(sum(rl.amount), 0) into v_refunds
   from public.refund_log rl
   left join public.bookings b on b.id = rl.booking_id
   where rl.status = 'processed'
     and (rl.created_at at time zone 'Asia/Kolkata')::date between p_from and p_to
-    and (p_venue is null or b.venue_id = p_venue);
+    and (p_venue is null or b.venue_id = p_venue)
+    and (p_sport is null or b.sport = p_sport);
 
   select count(*) into v_new_users from public.users
    where (created_at at time zone 'Asia/Kolkata')::date between p_from and p_to;
@@ -174,10 +190,10 @@ begin
   );
 end;
 $$;
-revoke all on function public._an_kpis(date, date, uuid) from public, anon, authenticated;
+revoke all on function public._an_kpis(date, date, uuid, text) from public, anon, authenticated;
 
 -- ── 2. Overview: this period + the equal-length period before it ────────────
-create or replace function public.admin_analytics_overview(p_from date, p_to date, p_venue uuid default null)
+create or replace function public.admin_analytics_overview(p_from date, p_to date, p_venue uuid default null, p_sport text default null)
 returns jsonb
 language plpgsql
 stable
@@ -201,16 +217,16 @@ begin
     'from', p_from, 'to', p_to,
     'prev_from', v_prev_from, 'prev_to', v_prev_to,
     'can_see_revenue', public.is_super_admin(),
-    'current',  public._an_kpis(p_from, p_to, p_venue),
-    'previous', public._an_kpis(v_prev_from, v_prev_to, p_venue)
+    'current',  public._an_kpis(p_from, p_to, p_venue, p_sport),
+    'previous', public._an_kpis(v_prev_from, v_prev_to, p_venue, p_sport)
   );
 end;
 $$;
-grant execute on function public.admin_analytics_overview(date, date, uuid) to authenticated;
+grant execute on function public.admin_analytics_overview(date, date, uuid, text) to authenticated;
 
 -- ── 3. Time series (day / week / month buckets, zero-filled) ────────────────
 create or replace function public.admin_analytics_timeseries(
-  p_from date, p_to date, p_granularity text default 'day', p_venue uuid default null
+  p_from date, p_to date, p_granularity text default 'day', p_venue uuid default null, p_sport text default null
 )
 returns table (bucket date, bookings integer, cancelled integer, gmv integer, commission integer, customers integer)
 language plpgsql
@@ -231,7 +247,7 @@ begin
   with b as (
     select date_trunc(p_granularity, x.day::timestamp)::date as bucket,
            x.valid, x.cancelled, x.gmv, x.commission, x.user_id
-    from public._an_bookings(p_from, p_to, p_venue) x
+    from public._an_bookings(p_from, p_to, p_venue, p_sport) x
   ),
   agg as (
     select b.bucket,
@@ -256,10 +272,10 @@ begin
   order by s;
 end;
 $$;
-grant execute on function public.admin_analytics_timeseries(date, date, text, uuid) to authenticated;
+grant execute on function public.admin_analytics_timeseries(date, date, text, uuid, text) to authenticated;
 
 -- ── 4. Revenue / performance per venue ──────────────────────────────────────
-create or replace function public.admin_analytics_venues(p_from date, p_to date)
+create or replace function public.admin_analytics_venues(p_from date, p_to date, p_sport text default null)
 returns table (
   venue_id uuid, name text, area text, is_active boolean,
   bookings integer, cancelled integer, gmv integer, commission integer,
@@ -294,19 +310,19 @@ begin
            coalesce(sum(x.gmv), 0)::integer                  as gmv,
            coalesce(sum(x.commission), 0)::integer           as commission,
            count(distinct x.user_id) filter (where x.valid)::integer as customers
-    from public._an_bookings(p_from, p_to, null) x group by x.venue_id
+    from public._an_bookings(p_from, p_to, null, p_sport) x group by x.venue_id
   ),
   prev as (
     select x.venue_id,
            count(*) filter (where x.valid)::integer as bookings,
            coalesce(sum(x.gmv), 0)::integer         as gmv
-    from public._an_bookings(v_prev_from, v_prev_to, null) x group by x.venue_id
+    from public._an_bookings(v_prev_from, v_prev_to, null, p_sport) x group by x.venue_id
   ),
   util as (
     select s.venue_id,
            count(*) filter (where s.status = 'booked')    as booked,
            count(*) filter (where s.status = 'available') as open
-    from public.slots s where s.date between p_from and p_to group by s.venue_id
+    from public.slots s where s.date between p_from and p_to and (p_sport is null or s.sport = p_sport) group by s.venue_id
   ),
   tot as (select coalesce(sum(cur.gmv), 0) as gmv from cur)
   select v.id, v.name, v.area, v.is_active,
@@ -330,10 +346,10 @@ begin
   order by case when fin then coalesce(cur.gmv, 0) else coalesce(cur.bookings, 0) end desc, v.name;
 end;
 $$;
-grant execute on function public.admin_analytics_venues(date, date) to authenticated;
+grant execute on function public.admin_analytics_venues(date, date, text) to authenticated;
 
 -- ── 5. Breakdowns: sport, weekday, hour, source ─────────────────────────────
-create or replace function public.admin_analytics_breakdown(p_from date, p_to date, p_venue uuid default null)
+create or replace function public.admin_analytics_breakdown(p_from date, p_to date, p_venue uuid default null, p_sport text default null)
 returns jsonb
 language plpgsql
 stable
@@ -353,7 +369,7 @@ begin
                'sport', t.sport, 'bookings', t.bookings,
                'gmv', case when fin then t.gmv end) order by t.bookings desc, t.sport)
       from (select x.sport, count(*) as bookings, coalesce(sum(x.gmv), 0) as gmv
-            from public._an_bookings(p_from, p_to, p_venue) x
+            from public._an_bookings(p_from, p_to, p_venue, p_sport) x
             where x.valid group by x.sport) t
     ), '[]'::jsonb),
     -- 0 = Monday … 6 = Sunday, by the day people PLAY
@@ -361,24 +377,24 @@ begin
       select jsonb_agg(jsonb_build_object('dow', d.dow, 'bookings', coalesce(t.bookings, 0)) order by d.dow)
       from generate_series(0, 6) d(dow)
       left join (select (extract(isodow from x.play_date)::int - 1) as dow, count(*) as bookings
-                 from public._an_bookings(p_from, p_to, p_venue) x
+                 from public._an_bookings(p_from, p_to, p_venue, p_sport) x
                  where x.valid group by 1) t on t.dow = d.dow
     ),
     'by_hour', (
       select jsonb_agg(jsonb_build_object('hour', h.hour, 'bookings', coalesce(t.bookings, 0)) order by h.hour)
       from generate_series(5, 23) h(hour)
       left join (select x.play_hour as hour, count(*) as bookings
-                 from public._an_bookings(p_from, p_to, p_venue) x
+                 from public._an_bookings(p_from, p_to, p_venue, p_sport) x
                  where x.valid and x.play_hour is not null group by 1) t on t.hour = h.hour
     ),
     'by_source', jsonb_build_object(
-      'online',  (select count(*) from public._an_bookings(p_from, p_to, p_venue) x where x.valid and x.source = 'online'),
-      'walk_in', (select count(*) from public._an_bookings(p_from, p_to, p_venue) x where x.valid and x.source = 'walk_in')
+      'online',  (select count(*) from public._an_bookings(p_from, p_to, p_venue, p_sport) x where x.valid and x.source = 'online'),
+      'walk_in', (select count(*) from public._an_bookings(p_from, p_to, p_venue, p_sport) x where x.valid and x.source = 'walk_in')
     )
   );
 end;
 $$;
-grant execute on function public.admin_analytics_breakdown(date, date, uuid) to authenticated;
+grant execute on function public.admin_analytics_breakdown(date, date, uuid, text) to authenticated;
 
 -- ── 6. Venue list for the picker (id + name only) ───────────────────────────
 create or replace function public.admin_analytics_venue_options()
@@ -393,3 +409,131 @@ as $$
   order by v.name;
 $$;
 grant execute on function public.admin_analytics_venue_options() to authenticated;
+
+-- ── 7. Performance by sport type (table: current vs previous period) ────────
+create or replace function public.admin_analytics_sports(p_from date, p_to date, p_venue uuid default null)
+returns table (
+  sport text, bookings integer, cancelled integer, gmv integer, commission integer,
+  avg_booking_value integer, customers integer, venues integer, utilization_pct numeric,
+  gmv_share_pct numeric, bookings_share_pct numeric, prev_bookings integer, prev_gmv integer
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+declare
+  fin boolean := public.is_super_admin();
+  v_len int;
+  v_prev_to date;
+  v_prev_from date;
+begin
+  if not public.is_admin() then raise exception 'NOT_ALLOWED'; end if;
+  if p_from is null or p_to is null or p_to < p_from then raise exception 'INVALID_RANGE'; end if;
+  if p_to - p_from > 800 then raise exception 'RANGE_TOO_LARGE'; end if;
+  v_len := (p_to - p_from) + 1;
+  v_prev_to := p_from - 1;
+  v_prev_from := v_prev_to - (v_len - 1);
+
+  return query
+  with names as (
+    select c.sport from public.courts c where c.sport is not null
+    union select b.sport from public.bookings b where b.sport is not null
+  ),
+  cur as (
+    select x.sport,
+           count(*) filter (where x.valid)::integer          as bookings,
+           count(*) filter (where x.cancelled)::integer      as cancelled,
+           coalesce(sum(x.gmv), 0)::integer                  as gmv,
+           coalesce(sum(x.commission), 0)::integer           as commission,
+           count(distinct x.user_id) filter (where x.valid)::integer as customers,
+           count(distinct x.venue_id) filter (where x.valid)::integer as venues
+    from public._an_bookings(p_from, p_to, p_venue, null) x group by x.sport
+  ),
+  prev as (
+    select x.sport,
+           count(*) filter (where x.valid)::integer as bookings,
+           coalesce(sum(x.gmv), 0)::integer         as gmv
+    from public._an_bookings(v_prev_from, v_prev_to, p_venue, null) x group by x.sport
+  ),
+  util as (
+    select s.sport,
+           count(*) filter (where s.status = 'booked')    as booked,
+           count(*) filter (where s.status = 'available') as open
+    from public.slots s
+    where s.date between p_from and p_to and (p_venue is null or s.venue_id = p_venue)
+    group by s.sport
+  ),
+  tot as (select coalesce(sum(cur.gmv), 0) as gmv, coalesce(sum(cur.bookings), 0) as bookings from cur)
+  select n.sport,
+         coalesce(cur.bookings, 0), coalesce(cur.cancelled, 0),
+         case when fin then coalesce(cur.gmv, 0) end,
+         case when fin then coalesce(cur.commission, 0) end,
+         case when fin and coalesce(cur.bookings, 0) > 0 then round(cur.gmv::numeric / cur.bookings)::integer end,
+         coalesce(cur.customers, 0), coalesce(cur.venues, 0),
+         case when coalesce(u.booked, 0) + coalesce(u.open, 0) > 0
+              then round(100.0 * u.booked / (u.booked + u.open), 1) end,
+         case when fin and (select gmv from tot) > 0
+              then round(100.0 * coalesce(cur.gmv, 0) / (select gmv from tot), 1) end,
+         case when (select bookings from tot) > 0
+              then round(100.0 * coalesce(cur.bookings, 0) / (select bookings from tot), 1) end,
+         coalesce(prev.bookings, 0),
+         case when fin then coalesce(prev.gmv, 0) end
+  from names n
+  left join cur  on cur.sport  = n.sport
+  left join prev on prev.sport = n.sport
+  left join util u on u.sport  = n.sport
+  order by case when fin then coalesce(cur.gmv, 0) else coalesce(cur.bookings, 0) end desc, n.sport;
+end;
+$$;
+grant execute on function public.admin_analytics_sports(date, date, uuid) to authenticated;
+
+-- ── 8. Bookings / revenue per sport over time (for the stacked chart) ───────
+create or replace function public.admin_analytics_sport_series(
+  p_from date, p_to date, p_granularity text default 'day', p_venue uuid default null
+)
+returns table (bucket date, sport text, bookings integer, gmv integer)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+declare
+  fin boolean := public.is_super_admin();
+begin
+  if not public.is_admin() then raise exception 'NOT_ALLOWED'; end if;
+  if p_granularity not in ('day', 'week', 'month') then raise exception 'INVALID_GRANULARITY'; end if;
+  if p_from is null or p_to is null or p_to < p_from then raise exception 'INVALID_RANGE'; end if;
+  if p_to - p_from > 1500 then raise exception 'RANGE_TOO_LARGE'; end if;
+
+  return query
+  select date_trunc(p_granularity, x.day::timestamp)::date,
+         x.sport,
+         count(*) filter (where x.valid)::integer,
+         case when fin then coalesce(sum(x.gmv), 0)::integer end
+  from public._an_bookings(p_from, p_to, p_venue, null) x
+  where x.valid
+  group by 1, 2
+  order by 1, 2;
+end;
+$$;
+grant execute on function public.admin_analytics_sport_series(date, date, text, uuid) to authenticated;
+
+-- ── 9. Sport list for the picker ────────────────────────────────────────────
+create or replace function public.admin_analytics_sport_options()
+returns table (sport text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select n.sport from (
+    select c.sport from public.courts c where c.sport is not null
+    union select b.sport from public.bookings b where b.sport is not null
+  ) n
+  where public.is_admin()
+  order by n.sport;
+$$;
+grant execute on function public.admin_analytics_sport_options() to authenticated;

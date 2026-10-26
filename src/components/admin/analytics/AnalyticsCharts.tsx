@@ -12,7 +12,13 @@ import {
 } from "recharts";
 import type { Breakdown, SeriesPoint } from "@/lib/admin-data/analytics";
 import { fmtInr, fmtInt } from "@/lib/admin-data/analytics";
-import { addDays, bucketLabel, fmtDay, type Granularity } from "@/lib/admin-data/analyticsPeriods";
+import {
+  addDays,
+  bucketLabel,
+  fmtDay,
+  type Granularity,
+} from "@/lib/admin-data/analyticsPeriods";
+import { sportColor } from "./sportColors";
 
 const tick = { fontSize: 11, fill: "var(--color-muted-foreground)" };
 
@@ -33,8 +39,12 @@ function Card({
     <div className={`surface-card rounded-xl p-4 ${className}`}>
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-display text-base font-semibold text-foreground">{title}</h3>
-          {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
+          <h3 className="font-display text-base font-semibold text-foreground">
+            {title}
+          </h3>
+          {subtitle ? (
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          ) : null}
         </div>
         {right}
       </div>
@@ -51,7 +61,11 @@ function Empty({ text = "No bookings in this period." }: { text?: string }) {
   );
 }
 
-type TipProps = { active?: boolean; payload?: Array<{ payload: SeriesPoint }>; granularity: Granularity };
+type TipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: SeriesPoint }>;
+  granularity: Granularity;
+};
 
 function SeriesTooltip({ active, payload, granularity }: TipProps) {
   const p = payload?.[0]?.payload;
@@ -66,8 +80,12 @@ function SeriesTooltip({ active, payload, granularity }: TipProps) {
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <p className="font-semibold text-popover-foreground">{title}</p>
       <p className="text-muted-foreground">{fmtInt(p.bookings)} bookings</p>
-      {p.cancelled > 0 ? <p className="text-muted-foreground">{fmtInt(p.cancelled)} cancelled</p> : null}
-      {p.gmv != null ? <p className="text-muted-foreground">{fmtInr(p.gmv, false)} revenue</p> : null}
+      {p.cancelled > 0 ? (
+        <p className="text-muted-foreground">{fmtInt(p.cancelled)} cancelled</p>
+      ) : null}
+      {p.gmv != null ? (
+        <p className="text-muted-foreground">{fmtInr(p.gmv, false)} revenue</p>
+      ) : null}
     </div>
   );
 }
@@ -83,7 +101,8 @@ export function TrendChart({
   showRevenue: boolean;
 }) {
   const hasData = data.some((d) => d.bookings > 0 || d.cancelled > 0);
-  const label = granularity === "day" ? "day" : granularity === "week" ? "week" : "month";
+  const label =
+    granularity === "day" ? "day" : granularity === "week" ? "week" : "month";
   return (
     <Card
       title="Bookings & revenue"
@@ -95,8 +114,20 @@ export function TrendChart({
       ) : (
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 8, right: showRevenue ? 0 : 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+            <ComposedChart
+              data={data}
+              margin={{
+                top: 8,
+                right: showRevenue ? 0 : 8,
+                left: -16,
+                bottom: 0,
+              }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--color-border)"
+                vertical={false}
+              />
               <XAxis
                 dataKey="bucket"
                 tickFormatter={(v: string) => bucketLabel(v, granularity)}
@@ -106,7 +137,14 @@ export function TrendChart({
                 axisLine={false}
                 tickLine={false}
               />
-              <YAxis yAxisId="b" tick={tick} axisLine={false} tickLine={false} width={40} allowDecimals={false} />
+              <YAxis
+                yAxisId="b"
+                tick={tick}
+                axisLine={false}
+                tickLine={false}
+                width={40}
+                allowDecimals={false}
+              />
               {showRevenue ? (
                 <YAxis
                   yAxisId="r"
@@ -118,8 +156,17 @@ export function TrendChart({
                   tickFormatter={(v: number) => fmtInr(v)}
                 />
               ) : null}
-              <Tooltip content={<SeriesTooltip granularity={granularity} />} cursor={{ fill: "var(--color-secondary)", opacity: 0.5 }} />
-              <Bar yAxisId="b" dataKey="bookings" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              <Tooltip
+                content={<SeriesTooltip granularity={granularity} />}
+                cursor={{ fill: "var(--color-secondary)", opacity: 0.5 }}
+              />
+              <Bar
+                yAxisId="b"
+                dataKey="bookings"
+                fill="var(--color-chart-1)"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={28}
+              />
               {showRevenue ? (
                 <Line
                   yAxisId="r"
@@ -149,16 +196,23 @@ export function WeeklyBookingsChart({
   onSelectWeek: (weekStart: string) => void;
 }) {
   const total = data.reduce((s, d) => s + d.bookings, 0);
-  const best = data.reduce<SeriesPoint | null>((m, d) => (!m || d.bookings > m.bookings ? d : m), null);
+  const best = data.reduce<SeriesPoint | null>(
+    (m, d) => (!m || d.bookings > m.bookings ? d : m),
+    null,
+  );
   return (
     <Card
       title="Weekly bookings"
       subtitle={`Last ${data.length} weeks · click a bar to open that week`}
       right={
         <div className="text-right">
-          <p className="font-display text-lg font-semibold text-foreground">{fmtInt(total)}</p>
+          <p className="font-display text-lg font-semibold text-foreground">
+            {fmtInt(total)}
+          </p>
           <p className="text-[11px] text-muted-foreground">
-            {best && best.bookings > 0 ? `best: ${fmtDay(best.bucket)} (${best.bookings})` : "bookings"}
+            {best && best.bookings > 0
+              ? `best: ${fmtDay(best.bucket)} (${best.bookings})`
+              : "bookings"}
           </p>
         </div>
       }
@@ -168,8 +222,15 @@ export function WeeklyBookingsChart({
       ) : (
         <div className="h-56 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+            <BarChart
+              data={data}
+              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--color-border)"
+                vertical={false}
+              />
               <XAxis
                 dataKey="bucket"
                 tickFormatter={(v: string) => fmtDay(v)}
@@ -179,7 +240,13 @@ export function WeeklyBookingsChart({
                 axisLine={false}
                 tickLine={false}
               />
-              <YAxis tick={tick} axisLine={false} tickLine={false} width={40} allowDecimals={false} />
+              <YAxis
+                tick={tick}
+                axisLine={false}
+                tickLine={false}
+                width={40}
+                allowDecimals={false}
+              />
               <Tooltip
                 content={<SeriesTooltip granularity="week" />}
                 cursor={{ fill: "var(--color-secondary)", opacity: 0.5 }}
@@ -198,7 +265,11 @@ export function WeeklyBookingsChart({
                   <Cell
                     key={d.bucket}
                     fill="var(--color-chart-1)"
-                    fillOpacity={selectedFrom == null || selectedFrom === d.bucket ? 1 : 0.35}
+                    fillOpacity={
+                      selectedFrom == null || selectedFrom === d.bucket
+                        ? 1
+                        : 0.35
+                    }
                   />
                 ))}
               </Bar>
@@ -210,9 +281,15 @@ export function WeeklyBookingsChart({
   );
 }
 
-const SPORT_COLORS = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)", "var(--color-chart-5)"];
-
-export function SportMix({ data, showRevenue }: { data: Breakdown["by_sport"]; showRevenue: boolean }) {
+export function SportMix({
+  data,
+  showRevenue,
+  sportOrder,
+}: {
+  data: Breakdown["by_sport"];
+  showRevenue: boolean;
+  sportOrder: string[];
+}) {
   const total = data.reduce((s, d) => s + d.bookings, 0);
   return (
     <Card title="Sport mix" subtitle="Share of bookings by sport">
@@ -220,20 +297,26 @@ export function SportMix({ data, showRevenue }: { data: Breakdown["by_sport"]; s
         <Empty />
       ) : (
         <ul className="space-y-3">
-          {data.slice(0, 6).map((s, i) => {
+          {data.slice(0, 8).map((s) => {
             const pct = (s.bookings / total) * 100;
             return (
               <li key={s.sport}>
                 <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
-                  <span className="truncate font-medium text-foreground">{s.sport}</span>
+                  <span className="truncate font-medium text-foreground">
+                    {s.sport}
+                  </span>
                   <span className="shrink-0 text-muted-foreground">
-                    {fmtInt(s.bookings)} · {pct.toFixed(0)}%{showRevenue && s.gmv != null ? ` · ${fmtInr(s.gmv)}` : ""}
+                    {fmtInt(s.bookings)} · {pct.toFixed(0)}%
+                    {showRevenue && s.gmv != null ? ` · ${fmtInr(s.gmv)}` : ""}
                   </span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-secondary">
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${Math.max(pct, 2)}%`, background: SPORT_COLORS[i % SPORT_COLORS.length] }}
+                    style={{
+                      width: `${Math.max(pct, 2)}%`,
+                      background: sportColor(s.sport, sportOrder),
+                    }}
                   />
                 </div>
               </li>
@@ -263,17 +346,32 @@ function MiniBars({
     <div className="h-44 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-          <XAxis dataKey={xKey} tickFormatter={fmtX} tick={tick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+          <XAxis
+            dataKey={xKey}
+            tickFormatter={fmtX}
+            tick={tick}
+            axisLine={false}
+            tickLine={false}
+            interval="preserveStartEnd"
+          />
           <YAxis hide allowDecimals={false} />
           <Tooltip
             cursor={{ fill: "var(--color-secondary)", opacity: 0.5 }}
             formatter={(v: number) => [`${v} bookings`, ""]}
             labelFormatter={(v: number) => fmtX(v)}
-            contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}
+            contentStyle={{
+              fontSize: 12,
+              borderRadius: 8,
+              border: "1px solid var(--color-border)",
+            }}
           />
           <Bar dataKey="bookings" radius={[3, 3, 0, 0]}>
             {data.map((d, i) => (
-              <Cell key={i} fill={color} fillOpacity={max > 0 && (d["bookings"] ?? 0) === max ? 1 : 0.55} />
+              <Cell
+                key={i}
+                fill={color}
+                fillOpacity={max > 0 && (d["bookings"] ?? 0) === max ? 1 : 0.55}
+              />
             ))}
           </Bar>
         </BarChart>
@@ -284,26 +382,59 @@ function MiniBars({
 
 export function WeekdayChart({ data }: { data: Breakdown["by_weekday"] }) {
   const total = data.reduce((s, d) => s + d.bookings, 0);
-  const peak = data.reduce((m, d) => (d.bookings > m.bookings ? d : m), data[0] ?? { dow: 0, bookings: 0 });
+  const peak = data.reduce(
+    (m, d) => (d.bookings > m.bookings ? d : m),
+    data[0] ?? { dow: 0, bookings: 0 },
+  );
   return (
-    <Card title="Busiest days" subtitle={total > 0 ? `Peak: ${DOW[peak.dow]} (${peak.bookings})` : "By play day"}>
+    <Card
+      title="Busiest days"
+      subtitle={
+        total > 0 ? `Peak: ${DOW[peak.dow]} (${peak.bookings})` : "By play day"
+      }
+    >
       {total === 0 ? (
         <Empty />
       ) : (
-        <MiniBars data={data} xKey="dow" fmtX={(v) => DOW[v] ?? ""} color="var(--color-chart-3)" />
+        <MiniBars
+          data={data}
+          xKey="dow"
+          fmtX={(v) => DOW[v] ?? ""}
+          color="var(--color-chart-3)"
+        />
       )}
     </Card>
   );
 }
 
-const hourName = (h: number) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? "a" : "p"}`;
+const hourName = (h: number) =>
+  `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? "a" : "p"}`;
 
 export function HourChart({ data }: { data: Breakdown["by_hour"] }) {
   const total = data.reduce((s, d) => s + d.bookings, 0);
-  const peak = data.reduce((m, d) => (d.bookings > m.bookings ? d : m), data[0] ?? { hour: 0, bookings: 0 });
+  const peak = data.reduce(
+    (m, d) => (d.bookings > m.bookings ? d : m),
+    data[0] ?? { hour: 0, bookings: 0 },
+  );
   return (
-    <Card title="Peak hours" subtitle={total > 0 ? `Peak: ${hourName(peak.hour)} (${peak.bookings})` : "By start time"}>
-      {total === 0 ? <Empty /> : <MiniBars data={data} xKey="hour" fmtX={hourName} color="var(--color-chart-2)" />}
+    <Card
+      title="Peak hours"
+      subtitle={
+        total > 0
+          ? `Peak: ${hourName(peak.hour)} (${peak.bookings})`
+          : "By start time"
+      }
+    >
+      {total === 0 ? (
+        <Empty />
+      ) : (
+        <MiniBars
+          data={data}
+          xKey="hour"
+          fmtX={hourName}
+          color="var(--color-chart-2)"
+        />
+      )}
     </Card>
   );
 }
@@ -318,23 +449,51 @@ export function SourceSplit({ data }: { data: Breakdown["by_source"] }) {
       ) : (
         <div className="space-y-4 pt-2">
           <div className="flex h-3 overflow-hidden rounded-full bg-secondary">
-            <div className="h-full" style={{ width: `${online}%`, background: "var(--color-chart-1)" }} />
-            <div className="h-full" style={{ width: `${100 - online}%`, background: "var(--color-chart-2)" }} />
+            <div
+              className="h-full"
+              style={{
+                width: `${online}%`,
+                background: "var(--color-chart-1)",
+              }}
+            />
+            <div
+              className="h-full"
+              style={{
+                width: `${100 - online}%`,
+                background: "var(--color-chart-2)",
+              }}
+            />
           </div>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="h-2 w-2 rounded-full" style={{ background: "var(--color-chart-1)" }} /> App bookings
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: "var(--color-chart-1)" }}
+                />{" "}
+                App bookings
               </dt>
-              <dd className="font-display text-xl font-semibold text-foreground">{fmtInt(data.online)}</dd>
-              <dd className="text-xs text-muted-foreground">{online.toFixed(0)}%</dd>
+              <dd className="font-display text-xl font-semibold text-foreground">
+                {fmtInt(data.online)}
+              </dd>
+              <dd className="text-xs text-muted-foreground">
+                {online.toFixed(0)}%
+              </dd>
             </div>
             <div>
               <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="h-2 w-2 rounded-full" style={{ background: "var(--color-chart-2)" }} /> Walk-in (partner)
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: "var(--color-chart-2)" }}
+                />{" "}
+                Walk-in (partner)
               </dt>
-              <dd className="font-display text-xl font-semibold text-foreground">{fmtInt(data.walk_in)}</dd>
-              <dd className="text-xs text-muted-foreground">{(100 - online).toFixed(0)}%</dd>
+              <dd className="font-display text-xl font-semibold text-foreground">
+                {fmtInt(data.walk_in)}
+              </dd>
+              <dd className="text-xs text-muted-foreground">
+                {(100 - online).toFixed(0)}%
+              </dd>
             </div>
           </dl>
         </div>
@@ -344,5 +503,9 @@ export function SourceSplit({ data }: { data: Breakdown["by_source"] }) {
 }
 
 export function ChartsSkeleton({ className = "h-64" }: { className?: string }) {
-  return <div className={`surface-card animate-pulse rounded-xl bg-muted/60 ${className}`} />;
+  return (
+    <div
+      className={`surface-card animate-pulse rounded-xl bg-muted/60 ${className}`}
+    />
+  );
 }

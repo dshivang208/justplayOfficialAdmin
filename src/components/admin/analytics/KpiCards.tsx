@@ -105,7 +105,8 @@ const BOOKINGS: Metric[] = [
     raw: (k) => k.bookings,
     delta: "pct",
     good: "up",
-    hint: (k) => `${fmtInt(k.online_bookings)} online · ${fmtInt(k.walk_in_bookings)} walk-in`,
+    hint: (k) =>
+      `${fmtInt(k.online_bookings)} online · ${fmtInt(k.walk_in_bookings)} walk-in`,
   },
   {
     label: "Cancellation rate",
@@ -128,7 +129,10 @@ const BOOKINGS: Metric[] = [
   {
     label: "Avg booking lead time",
     icon: CalendarClock,
-    value: (k) => (k.avg_lead_days == null ? "—" : `${k.avg_lead_days.toFixed(1).replace(/\.0$/, "")} days`),
+    value: (k) =>
+      k.avg_lead_days == null
+        ? "—"
+        : `${k.avg_lead_days.toFixed(1).replace(/\.0$/, "")} days`,
     raw: (k) => k.avg_lead_days,
     delta: "pct",
     hint: () => "Booked this far before play",
@@ -187,14 +191,25 @@ const VENUES: Metric[] = [
   {
     label: "Bookings / venue",
     icon: CalendarCheck,
-    value: (k) => (k.bookings_per_venue == null ? "—" : String(k.bookings_per_venue)),
+    value: (k) =>
+      k.bookings_per_venue == null ? "—" : String(k.bookings_per_venue),
     raw: (k) => k.bookings_per_venue,
     delta: "pct",
     good: "up",
   },
 ];
 
-function Delta({ metric, current, previous, compare }: { metric: Metric; current: Kpis; previous: Kpis; compare: string }) {
+function Delta({
+  metric,
+  current,
+  previous,
+  compare,
+}: {
+  metric: Metric;
+  current: Kpis;
+  previous: Kpis;
+  compare: string;
+}) {
   if (!metric.delta) return null;
   const a = metric.raw(current);
   const b = metric.raw(previous);
@@ -209,7 +224,10 @@ function Delta({ metric, current, previous, compare }: { metric: Metric; current
     change = pctChange(a, b);
     if (change == null) {
       return (
-        <p className="mt-1 text-[11px] font-semibold text-primary" title={`vs ${compare}`}>
+        <p
+          className="mt-1 text-[11px] font-semibold text-primary"
+          title={`vs ${compare}`}
+        >
           New
         </p>
       );
@@ -220,14 +238,21 @@ function Delta({ metric, current, previous, compare }: { metric: Metric; current
 
   const flat = Math.abs(change) < 0.05;
   const up = change > 0;
-  const good = flat || !metric.good ? null : (up && metric.good === "up") || (!up && metric.good === "down");
+  const good =
+    flat || !metric.good
+      ? null
+      : (up && metric.good === "up") || (!up && metric.good === "down");
   const Icon = flat ? Minus : up ? ArrowUpRight : ArrowDownRight;
 
   return (
     <p
       className={cn(
         "mt-1 inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] font-semibold",
-        good === null ? "text-muted-foreground" : good ? "text-primary" : "text-destructive",
+        good === null
+          ? "text-muted-foreground"
+          : good
+            ? "text-primary"
+            : "text-destructive",
       )}
       title={`vs ${compare}`}
     >
@@ -252,21 +277,32 @@ function Group({
 }) {
   return (
     <div className={className}>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h3>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {metrics.map((m) => {
           const hint = m.hint?.(overview.current);
           return (
             <div key={m.label} className="surface-card rounded-xl p-3.5">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{m.label}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {m.label}
+                </p>
                 <m.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
               </div>
               <p className="mt-2 font-display text-xl font-semibold text-foreground sm:text-2xl">
                 {m.value(overview.current)}
               </p>
-              <Delta metric={m} current={overview.current} previous={overview.previous} compare={compare} />
-              {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
+              <Delta
+                metric={m}
+                current={overview.current}
+                previous={overview.previous}
+                compare={compare}
+              />
+              {hint ? (
+                <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
+              ) : null}
             </div>
           );
         })}
@@ -275,21 +311,49 @@ function Group({
   );
 }
 
-export function KpiCards({ overview, compare }: { overview: Overview; compare: string }) {
+export function KpiCards({
+  overview,
+  compare,
+}: {
+  overview: Overview;
+  compare: string;
+}) {
   return (
     <div className="space-y-5">
       {overview.can_see_revenue ? (
-        <Group title="Revenue" metrics={REVENUE} overview={overview} compare={compare} />
+        <Group
+          title="Revenue"
+          metrics={REVENUE}
+          overview={overview}
+          compare={compare}
+        />
       ) : (
         <div className="surface-card flex items-center gap-2 rounded-xl p-3.5 text-xs text-muted-foreground">
           <Lock className="h-4 w-4 shrink-0" />
           Revenue figures are visible to Super Admins only.
         </div>
       )}
-      <Group title="Bookings" metrics={BOOKINGS} overview={overview} compare={compare} />
+      <Group
+        title="Bookings"
+        metrics={BOOKINGS}
+        overview={overview}
+        compare={compare}
+      />
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <Group title="Customers" metrics={CUSTOMERS} overview={overview} compare={compare} className="xl:col-span-2 [&>div]:xl:grid-cols-4" />
-        <Group title="Venues" metrics={VENUES} overview={overview} compare={compare} className="[&>div]:xl:grid-cols-2" />
+        <Group
+          title="Customers"
+          metrics={CUSTOMERS}
+          overview={overview}
+          compare={compare}
+          className="xl:col-span-2 [&>div]:xl:grid-cols-4"
+        />
+        <Group
+          title="Venues"
+          metrics={VENUES}
+          overview={overview}
+          compare={compare}
+          className="[&>div]:xl:grid-cols-2"
+        />
       </div>
     </div>
   );
@@ -299,9 +363,15 @@ export function KpiCardsSkeleton() {
   return (
     <div className="space-y-5">
       {[6, 4, 4].map((n, i) => (
-        <div key={i} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <div
+          key={i}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
+        >
           {Array.from({ length: n }).map((_, j) => (
-            <div key={j} className="surface-card animate-pulse rounded-xl p-3.5">
+            <div
+              key={j}
+              className="surface-card animate-pulse rounded-xl p-3.5"
+            >
               <div className="h-3 w-20 rounded bg-muted" />
               <div className="mt-3 h-6 w-16 rounded bg-muted" />
               <div className="mt-3 h-3 w-24 rounded bg-muted" />
