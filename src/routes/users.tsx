@@ -79,7 +79,7 @@ export function UsersListPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{user.totalBookings}</TableCell>
                     <TableCell className="text-sm text-foreground">
-                      \u20b9{user.totalSpend.toLocaleString("en-IN")}
+                      ₹{user.totalSpend.toLocaleString("en-IN")}
                     </TableCell>
                     <TableCell>
                       <UserStatusBadge status={user.status} />

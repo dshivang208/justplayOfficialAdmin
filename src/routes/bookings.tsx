@@ -241,7 +241,7 @@ export function BookingsListPage() {
                           <p className="text-xs">{b.time}</p>
                         </TableCell>
                         <TableCell className="text-sm text-foreground">
-                          \u20b9{b.amount.toLocaleString("en-IN")}
+                          ₹{b.amount.toLocaleString("en-IN")}
                         </TableCell>
                         <TableCell>
                           <PaymentStatusBadge status={b.paymentStatus} />

@@ -190,7 +190,7 @@ function TransactionLogPageContent() {
                       <TableCell className="text-sm text-muted-foreground">{t.bookingId}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{t.customerName}</TableCell>
                       <TableCell className="text-sm text-foreground">
-                        \u20b9{t.amount.toLocaleString("en-IN")}
+                        ₹{t.amount.toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell>
                         <TransactionStatusBadge status={t.status} />

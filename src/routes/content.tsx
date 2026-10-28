@@ -252,7 +252,7 @@ function FeaturedCommunitySection({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {typeLabel[item.type]} \u00b7 {item.subtitle}
+                    {typeLabel[item.type]} · {item.subtitle}
                   </p>
                 </div>
                 <Switch disabled={busyId === item.id} onCheckedChange={(v) => toggle(item, v)} />

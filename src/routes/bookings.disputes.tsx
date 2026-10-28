@@ -21,7 +21,7 @@ function DisputeCard({ flag }: { flag: EnrichedFlag }) {
         <div>
           <p className="text-sm font-semibold text-foreground">{formatBookingId(flag.bookingId)}</p>
           <p className="text-xs text-muted-foreground">
-            {flag.venueName} \u00b7 {flag.customerName}
+            {flag.venueName} · {flag.customerName}
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-secondary-foreground">
@@ -33,7 +33,7 @@ function DisputeCard({ flag }: { flag: EnrichedFlag }) {
         {/* Every real flag is raised by a venue partner — see the note in
             admin-data/bookings.ts. */}
         <span className="text-[11px] text-muted-foreground">
-          Raised by venue partner \u00b7 {formatDate(flag.date)}
+          Raised by venue partner · {formatDate(flag.date)}
         </span>
         <DisputeResolutionBadge resolution={flag.resolution} />
       </div>
@@ -116,7 +116,7 @@ export function BookingDisputesPage() {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground">
-                            {formatBookingId(f.bookingId)} \u00b7 {f.venueName}
+                            {formatBookingId(f.bookingId)} · {f.venueName}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">
                             {f.resolutionNote ?? f.reason}

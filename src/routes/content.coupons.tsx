@@ -134,7 +134,7 @@ function CreateCouponDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat">Flat (\u20b9)</SelectItem>
+                  <SelectItem value="flat">Flat (₹)</SelectItem>
                   <SelectItem value="percentage">Percentage (%)</SelectItem>
                 </SelectContent>
               </Select>

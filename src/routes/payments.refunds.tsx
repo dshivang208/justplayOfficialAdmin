@@ -163,12 +163,12 @@ export function RefundQueuePage() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-xs text-muted-foreground">
-                            {r.venueName} \u00b7 {r.customerName}
+                            {r.venueName} · {r.customerName}
                           </p>
                           <p className="text-[11px] text-muted-foreground">Requested by {r.requestedBy}</p>
                         </div>
                         <span className="shrink-0 font-display text-lg font-semibold text-foreground">
-                          \u20b9{r.amount.toLocaleString("en-IN")}
+                          ₹{r.amount.toLocaleString("en-IN")}
                         </span>
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">{r.reason}</p>
@@ -205,7 +205,7 @@ export function RefundQueuePage() {
                     <li key={r.id} className="flex items-center gap-3 px-4 py-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground">
-                          {r.customerName} \u00b7 \u20b9{r.amount.toLocaleString("en-IN")}
+                          {r.customerName} · ₹{r.amount.toLocaleString("en-IN")}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {r.reviewNote ?? r.reason}

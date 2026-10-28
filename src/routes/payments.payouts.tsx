@@ -139,10 +139,10 @@ function PayoutOversightPageContent() {
                         <TableRow key={p.venueId}>
                           <TableCell className="font-medium text-foreground">{p.venueName}</TableCell>
                           <TableCell className="text-sm text-foreground">
-                            \u20b9{p.pendingNet.toLocaleString("en-IN")}
+                            ₹{p.pendingNet.toLocaleString("en-IN")}
                             {p.pendingDeductions > 0 ? (
                               <p className="text-xs text-destructive">
-                                \u2212\u20b9{p.pendingDeductions.toLocaleString("en-IN")} deductions applied
+                                −₹{p.pendingDeductions.toLocaleString("en-IN")} deductions applied
                               </p>
                             ) : null}
                           </TableCell>
@@ -204,7 +204,7 @@ function PayoutOversightPageContent() {
                           <span className="font-medium text-foreground">{p.venueName}</span>
                         </TableCell>
                         <TableCell className="text-sm text-foreground">
-                          \u20b9{p.amount.toLocaleString("en-IN")}
+                          ₹{p.amount.toLocaleString("en-IN")}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{p.method}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -258,15 +258,15 @@ function PayoutOversightPageContent() {
                     <li key={d.id} className="flex items-center gap-3 px-4 py-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground">
-                          {d.venueName} \u00b7 Booking {d.bookingId}
+                          {d.venueName} · Booking {d.bookingId}
                         </p>
                         <p className="text-xs text-muted-foreground">{d.reason}</p>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          Queued {formatDate(d.createdAt)} \u00b7 applies to their next payout
+                          Queued {formatDate(d.createdAt)} · applies to their next payout
                         </p>
                       </div>
                       <span className="shrink-0 text-sm font-semibold text-destructive">
-                        \u2212\u20b9{d.amount.toLocaleString("en-IN")}
+                        −₹{d.amount.toLocaleString("en-IN")}
                       </span>
                     </li>
                   ))}

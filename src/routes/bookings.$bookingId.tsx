@@ -51,7 +51,7 @@ function NotFound() {
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
         <h1 className="font-display text-2xl font-semibold text-foreground">Booking not found</h1>
         <Link to="/bookings" className="mt-4 inline-block text-sm font-semibold text-primary">
-          \u2190 Back to bookings
+          ← Back to bookings
         </Link>
       </div>
     </AdminShell>
@@ -76,7 +76,7 @@ function CancelDialog({
         <DialogHeader>
           <DialogTitle>Cancel this booking</DialogTitle>
           <DialogDescription>
-            This is a manual override for support cases \u2014 the slot will be released immediately.
+            This is a manual override for support cases — the slot will be released immediately.
             If it's still within the free-cancellation window and was paid online, it refunds
             automatically, same as a normal cancellation.
           </DialogDescription>
@@ -133,14 +133,14 @@ function RefundDialog({
         <DialogHeader>
           <DialogTitle>Issue a refund</DialogTitle>
           <DialogDescription>
-            Up to the full paid amount of \u20b9{maxAmount.toLocaleString("en-IN")}. This is an
-            override \u2014 it goes through even if the booking is already cancelled or outside the
+            Up to the full paid amount of ₹{maxAmount.toLocaleString("en-IN")}. This is an
+            override — it goes through even if the booking is already cancelled or outside the
             free-cancellation window.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <Label htmlFor="refund-amount">Refund amount (\u20b9)</Label>
+            <Label htmlFor="refund-amount">Refund amount (₹)</Label>
             <Input
               id="refund-amount"
               type="number"
@@ -206,7 +206,7 @@ function CreditDialog({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <Label htmlFor="credit-amount">Credit amount (\u20b9)</Label>
+            <Label htmlFor="credit-amount">Credit amount (₹)</Label>
             <Input
               id="credit-amount"
               type="number"
@@ -353,7 +353,7 @@ export function BookingDetailPage() {
               <PaymentStatusBadge status={booking.paymentStatus} />
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              {booking.venueName} \u00b7 {booking.sport}
+              {booking.venueName} · {booking.sport}
             </p>
           </div>
 
@@ -395,7 +395,7 @@ export function BookingDetailPage() {
               </div>
               <div className="flex items-center gap-2 text-foreground">
                 <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
-                {formatDate(booking.date)} \u00b7 {booking.time}
+                {formatDate(booking.date)} · {booking.time}
               </div>
               <div className="flex items-center gap-2 text-foreground">
                 <IndianRupee className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -414,7 +414,7 @@ export function BookingDetailPage() {
                 Customer
               </p>
               <p className="mt-1.5 text-sm font-semibold text-foreground">{booking.customerName}</p>
-              <p className="mt-2 text-xs font-semibold text-primary">View profile \u2192</p>
+              <p className="mt-2 text-xs font-semibold text-primary">View profile →</p>
             </Link>
 
             {booking.flags.map((flag) => (
