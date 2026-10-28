@@ -22,22 +22,42 @@ firebase.initializeApp({
 });
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(async (payload) => {
   const d = payload.data || {};
+  let title = d.title || "JustPlay";
+  let body = d.body || "";
+
+  // Chat messages stack per conversation like WhatsApp: "3 new messages" + latest preview lines.
+  if (d.tag && /^(group|vgroup)-/.test(d.tag)) {
+    const prev = await self.registration.getNotifications({ tag: d.tag });
+    if (prev.length) {
+      const pd = prev[0].data || {};
+      const lines = ((pd.lines || [prev[0].body]).concat(body)).slice(-5);
+      const count = (pd.count || 1) + 1;
+      title = (d.title || "JustPlay") + " (" + count + " new messages)";
+      body = lines.join("\n");
+      return self.registration.showNotification(title, buildOptions(d, body, { count, lines }));
+    }
+    return self.registration.showNotification(title, buildOptions(d, body, { count: 1, lines: [body] }));
+  }
+  return self.registration.showNotification(title, buildOptions(d, body, {}));
+});
+
+function buildOptions(d, body, extra) {
   const options = {
-    body: d.body || "",
+    body,
     icon: self.location.origin + "/icons/notification-icon-192.png", // JustPlay logo, shown large beside the text
     badge: self.location.origin + "/icons/notification-badge-96.png", // small monochrome mark in the Android status bar
     vibrate: [120, 60, 120],
     timestamp: Date.now(),
     tag: d.tag || undefined,
     renotify: Boolean(d.tag),
-    data: { url: d.url || "/" },
+    data: Object.assign({ url: d.url || "/" }, extra),
     actions: [{ action: "open", title: "View" }],
   };
   if (d.image) options.image = d.image; // optional banner (Zomato-style rich card)
-  return self.registration.showNotification(d.title || "JustPlay", options);
-});
+  return options;
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
