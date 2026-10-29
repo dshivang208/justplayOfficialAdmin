@@ -23,6 +23,7 @@ export type SentNotification = {
   audience: NotificationAudience;
   sentDate: string;
   recipientCount: number;
+  imageUrl?: string | null;
 };
 
 type LogRow = {
@@ -31,12 +32,13 @@ type LogRow = {
   audience: NotificationAudience;
   recipient_count: number;
   sent_at: string;
+  image_url?: string | null;
 };
 
 export async function listSentNotifications(): Promise<SentNotification[]> {
   const { data, error } = await supabase
     .from("notifications_log")
-    .select("id, message, audience, recipient_count, sent_at")
+    .select("id, message, audience, recipient_count, sent_at, image_url")
     .order("sent_at", { ascending: false })
     .returns<LogRow[]>();
   if (error) throw new Error(error.message);
@@ -47,6 +49,7 @@ export async function listSentNotifications(): Promise<SentNotification[]> {
     audience: row.audience,
     sentDate: row.sent_at.slice(0, 10),
     recipientCount: row.recipient_count,
+    imageUrl: row.image_url ?? null,
   }));
 }
 
@@ -68,10 +71,27 @@ export type SendResult = {
   pushErrors: string[];
 };
 
+export const NOTIFICATION_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+export const NOTIFICATION_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Uploads a picture to the public `notification-images` bucket and returns its public URL. */
+export async function uploadNotificationImage(file: File): Promise<string> {
+  if (!NOTIFICATION_IMAGE_TYPES.includes(file.type)) throw new Error("Use a JPG, PNG or WebP image.");
+  if (file.size > NOTIFICATION_IMAGE_MAX_BYTES) throw new Error("Image is too large — keep it under 2 MB.");
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("notification-images")
+    .upload(path, file, { contentType: file.type, cacheControl: "31536000", upsert: false });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
+}
+
 export async function sendNotification(
   message: string,
   audience: NotificationAudience,
   channels: { inApp: boolean; sms: boolean; push: boolean } = { inApp: true, sms: false, push: false },
+  imageUrl?: string | null,
 ): Promise<SentNotification & SendResult> {
   const { data, error } = await supabase.functions.invoke<{
     log: LogRow;
@@ -83,7 +103,7 @@ export async function sendNotification(
     pushFailed: number;
     pushErrors: string[];
   }>("admin-send-notification", {
-    body: { message, audience, channels },
+    body: { message, audience, channels, ...(imageUrl ? { imageUrl } : {}) },
   });
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Could not send this notification.");
@@ -94,6 +114,7 @@ export async function sendNotification(
     audience: data.log.audience,
     sentDate: data.log.sent_at.slice(0, 10),
     recipientCount: data.log.recipient_count,
+    imageUrl: data.log.image_url ?? imageUrl ?? null,
     // Defensive: an older deployed version of admin-send-notification
     // (e.g. from before push support was added) won't include these
     // fields at all — coalescing to safe defaults means a version

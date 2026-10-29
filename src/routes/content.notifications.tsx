@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send } from "lucide-react";
+import { ImagePlus, Loader2, Send, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
 import { ContentSectionTabs } from "@/components/admin/ContentSectionTabs";
@@ -18,6 +18,8 @@ import {
   listSentNotifications,
   getAudienceCount,
   sendNotification,
+  uploadNotificationImage,
+  NOTIFICATION_IMAGE_TYPES,
   audienceLabels,
   type NotificationAudience,
   type SentNotification,
@@ -38,6 +40,22 @@ export function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  function pickImage(file: File | undefined) {
+    if (!file) return;
+    if (!NOTIFICATION_IMAGE_TYPES.includes(file.type)) return void toast.error("Use a JPG, PNG or WebP image.");
+    if (file.size > 2 * 1024 * 1024) return void toast.error("Image is too large — keep it under 2 MB.");
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+  function clearImage() {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -56,13 +74,16 @@ export function NotificationsPage() {
   async function handleSend() {
     setSending(true);
     try {
-      const result = await sendNotification(message.trim(), audience, {
-        inApp: sendInApp,
-        sms: sendSms,
-        push: sendPush,
-      });
+      const imageUrl = imageFile && sendPush ? await uploadNotificationImage(imageFile) : null;
+      const result = await sendNotification(
+        message.trim(),
+        audience,
+        { inApp: sendInApp, sms: sendSms, push: sendPush },
+        imageUrl,
+      );
       setSent((prev) => [result, ...prev]);
       setMessage("");
+      clearImage();
 
       const parts: string[] = [];
       if (sendInApp) {
@@ -122,6 +143,41 @@ export function NotificationsPage() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
+
+          <div className="mt-4">
+            <Label>Image (optional — shown in the push notification)</Label>
+            {imagePreview ? (
+              <div className="mt-1.5 flex items-start gap-3 rounded-lg border border-border p-2.5">
+                <img src={imagePreview} alt="Notification preview" className="h-20 w-36 rounded-md object-cover" />
+                <div className="min-w-0 flex-1 text-xs text-muted-foreground">
+                  <p className="truncate font-medium text-foreground">{imageFile?.name}</p>
+                  <p>{imageFile ? (imageFile.size / 1024).toFixed(0) : 0} KB</p>
+                  {!sendPush ? (
+                    <p className="mt-1 text-destructive">Tick "Push notification" below — images only go out with push.</p>
+                  ) : null}
+                </div>
+                <button type="button" onClick={clearImage} aria-label="Remove image" className="rounded-full p-1 hover:bg-muted">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="mt-1.5 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">
+                <ImagePlus className="h-4 w-4" /> Add image (JPG, PNG or WebP, up to 2 MB)
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(e) => {
+                    pickImage(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Best size: 2:1 landscape (e.g. 1024×512). Shows as a big picture on Android and desktop Chrome.
+            </p>
+          </div>
 
           <div className="mt-4">
             <Label>Target audience</Label>
@@ -186,6 +242,9 @@ export function NotificationsPage() {
             <ul className="surface-card divide-y divide-border overflow-hidden rounded-xl">
               {sent.map((n) => (
                 <li key={n.id} className="px-4 py-3">
+                  {n.imageUrl ? (
+                    <img src={n.imageUrl} alt="" loading="lazy" className="mb-2 h-16 w-32 rounded-md object-cover" />
+                  ) : null}
                   <p className="text-sm text-foreground">{n.message}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {audienceLabels[n.audience]} · {n.recipientCount.toLocaleString("en-IN")} recipients

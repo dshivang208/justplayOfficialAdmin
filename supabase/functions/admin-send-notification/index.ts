@@ -50,12 +50,13 @@ async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; e
 async function sendPushBatch(
   userIds: string[],
   message: string,
+  image?: string,
 ): Promise<{ sent: number; failed: number; error?: string }> {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-push-secret": PUSH_WEBHOOK_SECRET! },
-      body: JSON.stringify({ user_ids: userIds, app: "consumer", title: "JustPlay", body: message, url: "/notifications" }),
+      body: JSON.stringify({ user_ids: userIds, app: "consumer", title: "JustPlay", body: message, url: "/notifications", ...(image ? { image } : {}) }),
     });
     const out = await res.json().catch(() => null);
     if (!res.ok) return { sent: 0, failed: userIds.length, error: out?.error ?? `send-push returned ${res.status}` };
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
   if ("error" in auth) return json({ error: auth.error }, auth.status);
   const { admin, serviceClient } = auth;
 
-  let body: { message?: unknown; audience?: unknown; channels?: { inApp?: unknown; sms?: unknown; push?: unknown } };
+  let body: { message?: unknown; audience?: unknown; channels?: { inApp?: unknown; sms?: unknown; push?: unknown }; imageUrl?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -87,6 +88,15 @@ Deno.serve(async (req) => {
 
   if (typeof message !== "string" || message.trim().length === 0) {
     return json({ error: "Message is required." }, 400);
+  }
+  // The picture must be one an admin uploaded to our own public bucket — never an arbitrary URL.
+  let imageUrl: string | undefined;
+  if (body.imageUrl !== undefined && body.imageUrl !== null && body.imageUrl !== "") {
+    const allowedPrefix = `${SUPABASE_URL}/storage/v1/object/public/notification-images/`;
+    if (typeof body.imageUrl !== "string" || !body.imageUrl.startsWith(allowedPrefix) || body.imageUrl.length > 500) {
+      return json({ error: "Invalid image. Upload it from the notification form." }, 400);
+    }
+    imageUrl = body.imageUrl;
   }
   if (typeof audience !== "string" || !["all_users", "inactive_30_days", "pending_bookings"].includes(audience)) {
     return json({ error: "Invalid audience." }, 400);
@@ -108,6 +118,7 @@ Deno.serve(async (req) => {
       recipient_count: users.length,
       sent_by: admin.id,
       channels: { inApp: wantInApp, sms: wantSms, push: wantPush },
+      image_url: imageUrl ?? null,
     })
     .select()
     .maybeSingle();
@@ -157,7 +168,7 @@ Deno.serve(async (req) => {
       // Chunked so one request never carries an enormous audience.
       const ids = users.map((u) => u.id);
       for (let i = 0; i < ids.length; i += 500) {
-        const r = await sendPushBatch(ids.slice(i, i + 500), message.trim());
+        const r = await sendPushBatch(ids.slice(i, i + 500), message.trim(), imageUrl);
         pushSent += r.sent;
         pushFailed += r.failed;
         if (r.error && pushErrors.length < 5) pushErrors.push(r.error);
