@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { VenueQrTab } from "@/components/admin/VenueQrTab";
 import {
   Dialog,
   DialogContent,
@@ -687,7 +688,11 @@ export function VenueDetailPage() {
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
             {canSeeCommission ? <TabsTrigger value="commission">Commission</TabsTrigger> : null}
+            <TabsTrigger value="qr">QR Code</TabsTrigger>
           </TabsList>
+          <TabsContent value="qr" className="mt-5">
+            <VenueQrTab venueId={venue.id} venueName={venue.name} />
+          </TabsContent>
           <TabsContent value="details" className="mt-5">
             <DetailsTab venue={venue} partner={partner} onSave={updateVenueLocal} />
           </TabsContent>
