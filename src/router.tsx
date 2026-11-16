@@ -32,6 +32,7 @@ import { NotificationsPage } from "@/routes/content.notifications";
 import { AdminRolesPage } from "@/routes/roles";
 import { SupportInboxPage } from "@/routes/support";
 import { SupportTicketPage } from "@/routes/support.$ticketId";
+import { SuggestionsPage } from "@/routes/suggestions";
 
 function NotFound() {
   return (
@@ -151,6 +152,7 @@ const contentReferralsRoute = protectedRoute("/content/referrals", ReferralsPage
 const contentNotificationsRoute = protectedRoute("/content/notifications", NotificationsPage);
 const supportRoute = protectedRoute("/support", SupportInboxPage);
 const supportTicketRoute = protectedRoute("/support/$ticketId", SupportTicketPage);
+const suggestionsRoute = protectedRoute("/suggestions", SuggestionsPage);
 const rolesRoute = restrictedRoute(
   "/roles",
   AdminRolesPage,
@@ -174,6 +176,7 @@ const routeTree = rootRoute.addChildren([
   userDetailRoute,
   supportRoute,
   supportTicketRoute,
+  suggestionsRoute,
   paymentsRoute,
   paymentsPayoutsRoute,
   paymentsRefundsRoute,

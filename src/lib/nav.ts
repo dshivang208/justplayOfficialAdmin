@@ -7,6 +7,7 @@ import {
   Layers,
   ShieldCheck,
   Headset,
+  Lightbulb,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navItems: NavItem[] = [
   { label: "Bookings", href: "/bookings", icon: CalendarCheck, phase: 3 },
   { label: "Users", href: "/users", icon: Users, phase: 3 },
   { label: "Support", href: "/support", icon: Headset, phase: 3 },
+  { label: "Suggestions", href: "/suggestions", icon: Lightbulb, phase: 3 },
   { label: "Payments", href: "/payments", icon: Wallet, phase: 4 },
   { label: "Content", href: "/content", icon: Layers, phase: 5 },
   { label: "Roles & Access", href: "/roles", icon: ShieldCheck, phase: 5 },
