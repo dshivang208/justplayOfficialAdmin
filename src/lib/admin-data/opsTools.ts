@@ -129,3 +129,65 @@ export async function listAuditLog(limit = 500): Promise<AuditEntry[]> {
     createdAt: r.created_at,
   }));
 }
+
+/* ---------- Content reports ---------- */
+export type ReportAction = "dismiss" | "delete" | "delete_suspend";
+export type ContentReport = {
+  id: string;
+  kind: "group_message" | "game_question";
+  contentId: string;
+  authorId: string | null;
+  authorName: string;
+  text: string;
+  reasons: string[];
+  reportCount: number;
+  status: "open" | "dismissed" | "actioned";
+  adminNote: string | null;
+  createdAt: string;
+};
+
+/** One row per reported message (several reporters collapse into one card). */
+export async function listContentReports(): Promise<ContentReport[]> {
+  const { data, error } = await supabase
+    .from("content_reports")
+    .select("id,kind,content_id,author_id,content_text,reason,status,admin_note,created_at")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw new Error(error.message);
+  const rows = data ?? [];
+  const authorIds = Array.from(new Set(rows.map((r) => r.author_id).filter(Boolean))) as string[];
+  const names = new Map<string, string>();
+  if (authorIds.length) {
+    const { data: us } = await supabase.from("users").select("id,name").in("id", authorIds);
+    for (const u of us ?? []) names.set(u.id, u.name);
+  }
+  const grouped = new Map<string, ContentReport>();
+  for (const r of rows) {
+    const key = `${r.kind}:${r.content_id}:${r.status}`;
+    const g = grouped.get(key);
+    if (g) {
+      g.reportCount += 1;
+      if (!g.reasons.includes(r.reason)) g.reasons.push(r.reason);
+    } else {
+      grouped.set(key, {
+        id: r.id,
+        kind: r.kind,
+        contentId: r.content_id,
+        authorId: r.author_id,
+        authorName: (r.author_id && names.get(r.author_id)) || "Unknown player",
+        text: r.content_text,
+        reasons: [r.reason],
+        reportCount: 1,
+        status: r.status,
+        adminNote: r.admin_note,
+        createdAt: r.created_at,
+      });
+    }
+  }
+  return Array.from(grouped.values());
+}
+
+export async function resolveReport(id: string, action: ReportAction, note: string) {
+  const { error } = await supabase.rpc("admin_resolve_report", { p_id: id, p_action: action, p_note: note });
+  if (error) throw new Error(error.message);
+}
