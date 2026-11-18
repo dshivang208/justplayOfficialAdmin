@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ExportCsvButton } from "@/components/admin/ExportCsvButton";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Flag, ListFilter, Loader2 } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -83,13 +84,23 @@ export function BookingsListPage() {
   return (
     <AdminShell>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
           <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
             Booking &amp; User Management
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {loading ? "Loading\u2026" : `${bookings.length} bookings across all venues`}
           </p>
+          </div>
+          <ExportCsvButton
+            filename="justplay-bookings"
+            disabled={loading || filtered.length === 0}
+            headers={["Booking ID", "Customer", "Venue", "City", "Sport", "Date", "Time", "Amount (INR)", "Payment status", "Booking status", "Cancellation reason", "Flags"]}
+            getRows={() =>
+              filtered.map((b) => [formatBookingId(b.id), b.customerName, b.venueName, b.city, b.sport, b.date, b.time, b.amount, b.paymentStatus, b.bookingStatus, b.cancellationReason ?? "", b.flags.length])
+            }
+          />
         </div>
 
         <BookingSectionTabs />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ExportCsvButton } from "@/components/admin/ExportCsvButton";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Zap } from "lucide-react";
 import { RequireRole } from "@/components/admin/RequireRole";
@@ -92,13 +93,23 @@ function PayoutOversightPageContent() {
   return (
     <AdminShell>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
           <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
             Payments, Payouts &amp; Refunds
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {loading ? "Loading\u2026" : `${payouts.length} payout batches across all venues`}
           </p>
+          </div>
+          <ExportCsvButton
+            filename="justplay-payouts"
+            disabled={loading || payouts.length === 0}
+            headers={["Payout ID", "Venue", "Amount (INR)", "Method", "Payout date", "Status", "Cashfree transfer ID"]}
+            getRows={() =>
+              payouts.map((p) => [p.id, p.venueName, p.amount, p.method, p.payoutDate, p.status, p.cashfreeTransferId ?? ""])
+            }
+          />
         </div>
 
         <PaymentSectionTabs />

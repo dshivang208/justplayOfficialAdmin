@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ExportCsvButton } from "@/components/admin/ExportCsvButton";
 import { toast } from "sonner";
 import { Check, Loader2, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -127,7 +128,8 @@ export function RefundQueuePage() {
   return (
     <AdminShell>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
           <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
             Payments, Payouts &amp; Refunds
           </h1>
@@ -136,6 +138,15 @@ export function RefundQueuePage() {
               ? "Loading\u2026"
               : `${pending.length} refund request${pending.length === 1 ? "" : "s"} awaiting review`}
           </p>
+          </div>
+          <ExportCsvButton
+            filename="justplay-refund-requests"
+            disabled={loading || requests.length === 0}
+            headers={["Booking ID", "Venue", "Customer", "Amount (INR)", "Reason", "Requested by", "Status", "Review note", "Requested at", "Reviewed at"]}
+            getRows={() =>
+              requests.map((r) => [r.bookingId, r.venueName, r.customerName, r.amount, r.reason, r.requestedBy, r.status, r.reviewNote ?? "", r.requestedAt, r.reviewedAt ?? ""])
+            }
+          />
         </div>
 
         <PaymentSectionTabs />

@@ -33,6 +33,9 @@ import { AdminRolesPage } from "@/routes/roles";
 import { SupportInboxPage } from "@/routes/support";
 import { SupportTicketPage } from "@/routes/support.$ticketId";
 import { SuggestionsPage } from "@/routes/suggestions";
+import { ContactInboxPage } from "@/routes/inbox";
+import { AuditLogPage } from "@/routes/audit";
+import { ReviewsModerationPage } from "@/routes/reviews";
 
 function NotFound() {
   return (
@@ -153,6 +156,9 @@ const contentNotificationsRoute = protectedRoute("/content/notifications", Notif
 const supportRoute = protectedRoute("/support", SupportInboxPage);
 const supportTicketRoute = protectedRoute("/support/$ticketId", SupportTicketPage);
 const suggestionsRoute = protectedRoute("/suggestions", SuggestionsPage);
+const inboxRoute = protectedRoute("/inbox", ContactInboxPage);
+const auditRoute = protectedRoute("/audit", AuditLogPage);
+const reviewsRoute = protectedRoute("/reviews", ReviewsModerationPage);
 const rolesRoute = restrictedRoute(
   "/roles",
   AdminRolesPage,
@@ -177,6 +183,9 @@ const routeTree = rootRoute.addChildren([
   supportRoute,
   supportTicketRoute,
   suggestionsRoute,
+  inboxRoute,
+  auditRoute,
+  reviewsRoute,
   paymentsRoute,
   paymentsPayoutsRoute,
   paymentsRefundsRoute,

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ExportCsvButton } from "@/components/admin/ExportCsvButton";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -32,13 +33,23 @@ export function UsersListPage() {
   return (
     <AdminShell>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
           <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
             User Directory
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {loading ? "Loading\u2026" : `${users.length} registered consumer accounts`}
           </p>
+          </div>
+          <ExportCsvButton
+            filename="justplay-users"
+            disabled={loading || users.length === 0}
+            headers={["Name", "Phone", "Joined", "Total bookings", "Total spend (INR)", "Status", "Suspension reason"]}
+            getRows={() =>
+              users.map((u) => [u.name, u.phone, u.joinDate, u.totalBookings, u.totalSpend, u.status, u.suspensionReason ?? ""])
+            }
+          />
         </div>
 
         {loadError && <p className="mb-4 text-sm font-medium text-destructive">{loadError}</p>}
