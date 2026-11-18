@@ -191,3 +191,47 @@ export async function resolveReport(id: string, action: ReportAction, note: stri
   const { error } = await supabase.rpc("admin_resolve_report", { p_id: id, p_action: action, p_note: note });
   if (error) throw new Error(error.message);
 }
+
+/* ---------- Site settings ---------- */
+export type SiteSettingsForm = {
+  supportEmail: string;
+  supportPhone: string;
+  announcementActive: boolean;
+  announcementText: string;
+  announcementUrl: string;
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+};
+
+export async function getSiteSettings(): Promise<SiteSettingsForm> {
+  const { data, error } = await supabase.from("site_settings").select("*").eq("id", true).maybeSingle();
+  if (error) throw new Error(error.message);
+  return {
+    supportEmail: data?.support_email ?? "",
+    supportPhone: data?.support_phone ?? "",
+    announcementActive: data?.announcement_active ?? false,
+    announcementText: data?.announcement_text ?? "",
+    announcementUrl: data?.announcement_url ?? "",
+    maintenanceMode: data?.maintenance_mode ?? false,
+    maintenanceMessage: data?.maintenance_message ?? "",
+  };
+}
+
+export async function saveSiteSettings(f: SiteSettingsForm) {
+  const { error } = await supabase.rpc("admin_update_site_settings", {
+    p_support_email: f.supportEmail,
+    p_support_phone: f.supportPhone,
+    p_announcement_active: f.announcementActive,
+    p_announcement_text: f.announcementText,
+    p_announcement_url: f.announcementUrl,
+    p_maintenance_mode: f.maintenanceMode,
+    p_maintenance_message: f.maintenanceMessage,
+  });
+  if (error) {
+    const map: Record<string, string> = {
+      ANNOUNCEMENT_TEXT_REQUIRED: "Add the announcement text before turning it on.",
+      INVALID_URL: "The link must start with https:// or /",
+    };
+    throw new Error(map[error.message] ?? error.message);
+  }
+}

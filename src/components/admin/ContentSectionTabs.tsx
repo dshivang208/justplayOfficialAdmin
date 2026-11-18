@@ -7,6 +7,7 @@ const tabs = [
   { label: "Coupons", href: "/content/coupons" },
   { label: "Referrals & Points", href: "/content/referrals" },
   { label: "Notifications", href: "/content/notifications" },
+  { label: "Site Settings", href: "/content/settings" },
 ] as const;
 
 export function ContentSectionTabs() {

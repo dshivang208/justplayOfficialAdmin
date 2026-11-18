@@ -36,6 +36,7 @@ import { SuggestionsPage } from "@/routes/suggestions";
 import { ContactInboxPage } from "@/routes/inbox";
 import { AuditLogPage } from "@/routes/audit";
 import { ReportsPage } from "@/routes/reports";
+import { SiteSettingsPage } from "@/routes/content.settings";
 import { ReviewsModerationPage } from "@/routes/reviews";
 
 function NotFound() {
@@ -152,6 +153,7 @@ const paymentsSummaryRoute = restrictedRoute(
 const contentRoute = protectedRoute("/content", FeaturedContentPage);
 const contentEventsRoute = protectedRoute("/content/events", EventsPage);
 const contentCouponsRoute = protectedRoute("/content/coupons", CouponsPage);
+const contentSettingsRoute = protectedRoute("/content/settings", SiteSettingsPage);
 const contentReferralsRoute = protectedRoute("/content/referrals", ReferralsPage);
 const contentNotificationsRoute = protectedRoute("/content/notifications", NotificationsPage);
 const supportRoute = protectedRoute("/support", SupportInboxPage);
@@ -197,6 +199,7 @@ const routeTree = rootRoute.addChildren([
   contentEventsRoute,
   contentCouponsRoute,
   contentReferralsRoute,
+  contentSettingsRoute,
   contentNotificationsRoute,
   rolesRoute,
 ]);
