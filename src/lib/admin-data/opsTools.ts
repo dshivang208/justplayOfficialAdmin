@@ -235,3 +235,24 @@ export async function saveSiteSettings(f: SiteSettingsForm) {
     throw new Error(map[error.message] ?? error.message);
   }
 }
+
+/* ---------- Reply to a contact message by email ---------- */
+export async function replyToContact(submissionId: string, reply: string, resolve: boolean) {
+  const { data, error } = await supabase.functions.invoke<{ ok?: boolean; error?: string }>(
+    "admin-reply-contact",
+    { body: { submissionId, reply, resolve } },
+  );
+  if (error) {
+    // supabase-js hides the function's JSON error body inside error.context
+    let msg = error.message;
+    try {
+      const ctx = (error as { context?: Response }).context;
+      const j = ctx ? await ctx.json() : null;
+      if (j?.error) msg = j.error;
+    } catch {
+      /* keep generic message */
+    }
+    throw new Error(msg);
+  }
+  if (!data?.ok) throw new Error(data?.error ?? "Could not send the reply.");
+}

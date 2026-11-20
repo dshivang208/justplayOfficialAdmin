@@ -5,6 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { ExportCsvButton } from "@/components/admin/ExportCsvButton";
 import {
   listContactMessages,
+  replyToContact,
   updateContactMessage,
   type ContactMessage,
   type ContactStatus,
@@ -24,6 +25,22 @@ function fmt(iso: string) {
 function Item({ m, onChanged }: { m: ContactMessage; onChanged: () => void }) {
   const [note, setNote] = useState(m.adminNote ?? "");
   const [busy, setBusy] = useState(false);
+  const [replying, setReplying] = useState(false);
+  const [reply, setReply] = useState("");
+  const sendReply = async (resolve: boolean) => {
+    setBusy(true);
+    try {
+      await replyToContact(m.id, reply.trim(), resolve);
+      toast.success("Reply sent by email");
+      setReplying(false);
+      setReply("");
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't send the reply.");
+    } finally {
+      setBusy(false);
+    }
+  };
   const save = async (status: ContactStatus) => {
     setBusy(true);
     try {
@@ -49,6 +66,31 @@ function Item({ m, onChanged }: { m: ContactMessage; onChanged: () => void }) {
           {m.email}
         </a>
       </p>
+      {replying ? (
+        <div className="mt-3 rounded-lg border border-border p-3">
+          <p className="text-xs font-semibold text-foreground">Email reply to {m.email}</p>
+          <textarea
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            rows={4}
+            maxLength={3000}
+            placeholder="Write your reply…"
+            className="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" disabled={busy || reply.trim().length < 2} onClick={() => void sendReply(false)}
+              className="rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">Send reply</button>
+            <button type="button" disabled={busy || reply.trim().length < 2} onClick={() => void sendReply(true)}
+              className="rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary disabled:opacity-50">Send &amp; resolve</button>
+            <button type="button" onClick={() => setReplying(false)} className="px-2 text-xs font-semibold text-muted-foreground">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setReplying(true)}
+          className="mt-3 rounded-full border border-primary px-3.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10">
+          Reply by email
+        </button>
+      )}
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}
