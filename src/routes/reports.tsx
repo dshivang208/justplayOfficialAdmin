@@ -5,7 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { ExportCsvButton } from "@/components/admin/ExportCsvButton";
 import { listContentReports, resolveReport, type ContentReport, type ReportAction } from "@/lib/admin-data/opsTools";
 
-const KIND: Record<ContentReport["kind"], string> = { group_message: "Group chat", game_question: "Game Q&A" };
+const KIND: Record<ContentReport["kind"], string> = { group_message: "Group chat", venue_group_message: "Venue group", game_question: "Game Q&A" };
 const REASON: Record<string, string> = {
   spam: "Spam", abuse: "Abusive language", harassment: "Harassment", inappropriate: "Inappropriate", other: "Other",
 };

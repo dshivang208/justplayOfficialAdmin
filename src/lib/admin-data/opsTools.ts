@@ -134,7 +134,7 @@ export async function listAuditLog(limit = 500): Promise<AuditEntry[]> {
 export type ReportAction = "dismiss" | "delete" | "delete_suspend";
 export type ContentReport = {
   id: string;
-  kind: "group_message" | "game_question";
+  kind: "group_message" | "game_question" | "venue_group_message";
   contentId: string;
   authorId: string | null;
   authorName: string;
